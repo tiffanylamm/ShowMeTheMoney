@@ -7,7 +7,7 @@ interface CategoryAutocompleteProps {
   suggestions: string[];
   className?: string;
   onBlur?: () => void;
-  onCommit?: () => void;
+  onCancel?: () => void;
 }
 
 const CategoryAutocomplete = ({
@@ -15,7 +15,7 @@ const CategoryAutocomplete = ({
   onChange,
   suggestions,
   onBlur,
-  onCommit,
+  onCancel,
 }: CategoryAutocompleteProps) => {
   const filtered = value
     ? suggestions.filter((s) => s.toLowerCase().includes(value.toLowerCase()))
@@ -35,9 +35,10 @@ const CategoryAutocomplete = ({
         onBlur={onBlur}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            onCommit?.();
-          } else if (e.key === "Escape") {
             onBlur?.();
+          }
+          if (e.key === "Escape") {
+            onCancel?.();
           }
         }}
         autoFocus

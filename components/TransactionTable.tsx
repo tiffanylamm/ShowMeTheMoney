@@ -407,8 +407,8 @@ const TransactionTable = ({
                     <CategoryAutocomplete
                       value={editValue}
                       onChange={setEditValue}
-                      onCommit={commitEdit}
                       onBlur={commitEdit}
+                      onCancel={() => { setEditingCell(null); setEditValue(""); }}
                       suggestions={allSuggestions}
                     />
                   ) : (
