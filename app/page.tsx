@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { SortConfig, Transaction } from "@/types/transaction";
+import { SortConfig, Transaction, Status } from "@/types/transaction";
 import TransactionTable from "@/components/TransactionTable";
 import CSVImportModal from "@/components/CSVImportModal";
 import { Search, Plus, Upload } from "lucide-react";
+
+const STATUS_PRIORITY: Record<Status, number> = {
+  Owed: 3,
+  Refunding: 2,
+  Completed: 1,
+};
 
 //sample data
 const created = Date.now();
@@ -18,6 +24,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Refunding",
     source: "BofA Checking",
     createdAt: created,
+    isGroup: false,
+    parentId: null,
   },
   {
     id: "2",
@@ -28,6 +36,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Completed",
     source: "BofA Credit Card",
     createdAt: created + 1,
+    isGroup: true,
+    parentId: null,
   },
   {
     id: "3",
@@ -38,6 +48,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Completed",
     source: "BofA Checking",
     createdAt: created + 2,
+    isGroup: false,
+    parentId: "2",
   },
   {
     id: "4",
@@ -48,6 +60,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Completed",
     source: "BofA Debit Card",
     createdAt: created + 3,
+    isGroup: false,
+    parentId: "2",
   },
   {
     id: "5",
@@ -58,6 +72,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Completed",
     source: "BofA Credit Card",
     createdAt: created + 4,
+    isGroup: false,
+    parentId: null,
   },
   {
     id: "6",
@@ -68,6 +84,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Completed",
     source: null,
     createdAt: created + 5,
+    isGroup: false,
+    parentId: null,
   },
   {
     id: "7",
@@ -78,6 +96,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Completed",
     source: "BofA Checking",
     createdAt: created + 6,
+    isGroup: false,
+    parentId: null,
   },
   {
     id: "8",
@@ -88,6 +108,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Completed",
     source: "BofA Credit Card",
     createdAt: created + 7,
+    isGroup: false,
+    parentId: null,
   },
   {
     id: "9",
@@ -98,6 +120,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     status: "Owed",
     source: null,
     createdAt: created + 8,
+    isGroup: false,
+    parentId: null,
   },
 ];
 
@@ -108,6 +132,9 @@ const Home = () => {
   const [showAddRow, setShowAddRow] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set([]));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([]));
+
   const handleSort = (key: keyof Transaction) => {
     setSortConfig((current) => {
       if (!current || current.key !== key) {
@@ -146,12 +173,15 @@ const Home = () => {
   };
 
   const handleDeleteTransaction = (id: string) => {
-    setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+    //delete transaction + any children 
+    setTransactions((prev) =>
+      prev.filter((tx) => tx.id !== id || tx.parentId !== id),
+    );
   };
 
   //filter + sort transactions
   const processedTransactions = useMemo(() => {
-    let result = [...transactions];
+    let result = transactions.filter((tx) => tx.parentId === null);
     //Filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -189,6 +219,85 @@ const Home = () => {
       createdAt: now + i,
     }));
     setTransactions((prev) => [...prev, ...transactionsComplete]);
+  };
+
+  const computeGroupFields = (
+    children: Transaction[],
+  ): Pick<Transaction, "date" | "amount" | "status" | "source"> => {
+    const date = children.reduce(
+      (earliest, c) => (c.date < earliest ? c.date : earliest),
+      children[0].date,
+    );
+    const amount = children.reduce((sum, c) => c.amount + sum, 0);
+    const status = children.reduce(
+      (top, c) =>
+        STATUS_PRIORITY[c.status] > STATUS_PRIORITY[top] ? c.status : top,
+      children[0].status,
+    );
+    const sources = [...new Set(children.map((c) => c.source).filter(Boolean))];
+    const source =
+      sources.length === 0 ? null : sources.length === 1 ? sources[0] : "Mixed";
+    return { date, amount, status, source };
+  };
+
+  const selectedUngroupedIds = [...selectedIds].filter((id) => {
+    const item = transactions.find((tx) => tx.id === id);
+    return item && !item.isGroup && item.parentId === null;
+  });
+
+  const clearSelected = () => setSelectedIds(new Set());
+
+  const handleCreateGroup = () => {
+    if (selectedUngroupedIds.length < 2) return;
+    const children = selectedUngroupedIds.map(
+      (id) => transactions.find((tx) => tx.id === id)!,
+    );
+    const groupInfo = computeGroupFields(children);
+    const groupId = crypto.randomUUID();
+
+    setTransactions((prev) => [
+      ...prev.map((tx) =>
+        selectedUngroupedIds.includes(tx.id)
+          ? { ...tx, parentId: groupId }
+          : tx,
+      ),
+      {
+        id: groupId,
+        description: "New Group",
+        category: null,
+        ...groupInfo,
+        createdAt: Date.now(),
+        isGroup: true,
+        parentId: null,
+      },
+    ]);
+
+    setExpandedIds((prev) => new Set([...prev, groupId]));
+
+    clearSelected();
+  };
+
+  const handleAddToGroup = (groupId: string) => {
+    if (selectedUngroupedIds.length === 0) return;
+
+    setTransactions((prev) => [
+      ...prev.map((tx) =>
+        selectedUngroupedIds.includes(tx.id)
+          ? { ...tx, parentId: groupId }
+          : tx,
+      ),
+    ]);
+
+    clearSelected();
+  };
+
+  const handleUnlinkChild = (childId: string) => {
+    const child = transactions.find((tx) => tx.id === childId);
+    if (!child?.parentId) return;
+    setTransactions((prev) => [
+      ...prev.map((tx) => (tx.id === childId ? { ...tx, parentId: null } : tx)),
+    ]);
+    //no auto-dissolving can have 1 child under parent
   };
 
   return (
@@ -246,7 +355,13 @@ const Home = () => {
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}
           onImport={handleImportTransactions}
-          sourceSuggestions={[...new Set(transactions.map((t) => t.source).filter((s): s is string => s !== null))]}
+          sourceSuggestions={[
+            ...new Set(
+              transactions
+                .map((t) => t.source)
+                .filter((s): s is string => s !== null),
+            ),
+          ]}
         />
       </div>
     </main>

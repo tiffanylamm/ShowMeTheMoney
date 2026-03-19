@@ -13,7 +13,6 @@ interface CSVImportModalProps {
 
 interface CSVData {
   headers: string[];
-  // previewRows: string[][];
   allRows: string[][];
 }
 
@@ -193,6 +192,8 @@ const CSVImportModal = ({
           ...mapped,
           status: "Completed" as Status,
           source: resolvedSource,
+          isGroup: false,
+          parentId: null,
         }));
       onImport(newTransactions);
       onClose();
@@ -238,6 +239,8 @@ const CSVImportModal = ({
         amount: isNaN(cleanAmount) ? 0 : cleanAmount,
         status: "Completed" as Status,
         source: resolvedSource,
+        isGroup: false,
+        parentId: null,
       };
     });
     onImport(newTransactions);
@@ -249,8 +252,9 @@ const CSVImportModal = ({
   // Pre-compute preview rows for detected preset
   const presetPreviewRows =
     detectedPreset && csvData
-      ? csvData.allRows
-          .flatMap((row) => detectedPreset.mapRow(row, csvData.headers))
+      ? csvData.allRows.flatMap((row) =>
+          detectedPreset.mapRow(row, csvData.headers),
+        )
       : null;
 
   return (

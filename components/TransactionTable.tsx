@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { ArrowDown, ArrowUp, Check, Trash, X } from "lucide-react";
 import { Transaction, SortConfig, Status } from "@/types/transaction";
 import StatusBadge from "./StatusBadge";
-import InputAutocomplete from "./InputAutocomplete"; 
+import InputAutocomplete from "./InputAutocomplete";
 interface TransactionTableProps {
   transactions: Transaction[];
   sortConfig: SortConfig | null;
@@ -22,7 +22,13 @@ const localToday = () => {
 
 const STATUSES: Status[] = ["Completed", "Owed", "Refunding"];
 
-type EditableFields = "date" | "description" | "category" | "amount" | "status" | "source";
+type EditableFields =
+  | "date"
+  | "description"
+  | "category"
+  | "amount"
+  | "status"
+  | "source";
 
 const TransactionTable = ({
   transactions,
@@ -41,6 +47,8 @@ const TransactionTable = ({
     amount: 0,
     status: "Completed",
     source: null,
+    isGroup: false,
+    parentId: null,
   });
   const [editingCell, setEditingCell] = useState<{
     id: string;
@@ -50,7 +58,9 @@ const TransactionTable = ({
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
 
   const allSuggestions = useMemo(() => {
-    const used = transactions.map((t) => t.category).filter(Boolean) as string[];
+    const used = transactions
+      .map((t) => t.category)
+      .filter(Boolean) as string[];
     return Array.from(new Set(used));
   }, [transactions]);
 
@@ -82,7 +92,7 @@ const TransactionTable = ({
   };
 
   const commitEdit = () => {
-    console.log(`Commiting edit: ${editValue}`)
+    console.log(`Commiting edit: ${editValue}`);
     if (!editingCell) return;
     const { id, field } = editingCell;
     if (field === "amount") {
@@ -123,7 +133,9 @@ const TransactionTable = ({
       !newTransaction.date ||
       !newTransaction.description ||
       newTransaction.amount === undefined ||
-      newTransaction.category === undefined
+      newTransaction.category === undefined ||
+      !newTransaction.isGroup ||
+      newTransaction.parentId === undefined
     )
       return;
     onAdd({
@@ -133,6 +145,8 @@ const TransactionTable = ({
       amount: newTransaction.amount,
       status: newTransaction.status as Status,
       source: newTransaction.source ?? null,
+      isGroup: newTransaction.isGroup,
+      parentId: newTransaction.parentId,
     });
 
     setNewTransaction({
@@ -440,7 +454,10 @@ const TransactionTable = ({
                       value={editValue}
                       onChange={setEditValue}
                       onBlur={commitEdit}
-                      onCancel={() => { setEditingCell(null); setEditValue(""); }}
+                      onCancel={() => {
+                        setEditingCell(null);
+                        setEditValue("");
+                      }}
                       onCommit={(val) => {
                         onUpdate(tx.id, { category: val.trim() || null });
                         setEditingCell(null);
@@ -523,7 +540,10 @@ const TransactionTable = ({
                       value={editValue}
                       onChange={setEditValue}
                       onBlur={commitEdit}
-                      onCancel={() => { setEditingCell(null); setEditValue(""); }}
+                      onCancel={() => {
+                        setEditingCell(null);
+                        setEditValue("");
+                      }}
                       onCommit={(val) => {
                         onUpdate(tx.id, { source: val.trim() || null });
                         setEditingCell(null);
