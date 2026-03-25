@@ -1,16 +1,19 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Transaction, Status } from "@/types/transaction";
 import { Upload, X } from "lucide-react";
+import { CSV_PRESETS, CSVPreset } from "@/lib/csvPresets";
+import InputAutocomplete from "@/components/InputAutocomplete";
 
 interface CSVImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (transactions: Omit<Transaction, "id" | "createdAt">[]) => void;
+  sourceSuggestions: string[];
 }
 
 interface CSVData {
   headers: string[];
-  previewRows: string[][];
+  // previewRows: string[][];
   allRows: string[][];
 }
 
@@ -18,26 +21,15 @@ const FIELDS = [
   {
     key: "date",
     label: "Date",
-    // bgColor: "bg-blue-50",
-    // ringColor: "ring-blue-500",
-    // borderColor: "border-blue-500",
-    // textColor: "text-blue-700",
   },
   {
     key: "description",
     label: "Description",
-    // bgColor: "bg-blue-50",
-    // ringColor: "ring-blue-500",
-    // borderColor: "border-blue-500",
-    // textColor: "text-blue-700",
   },
   {
     key: "amount",
     label: "Amount",
     bgColor: "bg-blue-50",
-    // ringColor: "ring-blue-500",
-    // borderColor: "border-blue-500",
-    // textColor: "text-blue-700",
   },
 ] as const;
 
@@ -49,7 +41,6 @@ const FIELD_STYLES: Record<
     ring: string;
     border: string;
     hover: string;
-    // pill: string;
   }
 > = {
   date: {
@@ -58,7 +49,6 @@ const FIELD_STYLES: Record<
     border: "border-blue-500",
     text: "text-blue-700",
     hover: "hover:bg-blue-50 hover:text-blue-700",
-    // pill: "bg-blue-200/80 text-blue-700",
   },
   description: {
     bg: "bg-purple-50",
@@ -66,7 +56,6 @@ const FIELD_STYLES: Record<
     border: "border-purple-500",
     text: "text-purple-700",
     hover: "hover:bg-purple-50 hover:text-purple-700",
-    // pill: "bg-blue-200/80 text-blue-700",
   },
   amount: {
     bg: "bg-pink-50",
@@ -74,12 +63,10 @@ const FIELD_STYLES: Record<
     border: "border-pink-500",
     text: "text-pink-700",
     hover: "hover:bg-pink-50 hover:text-pink-700",
-    // pill: "bg-blue-200/80 text-blue-700",
   },
 };
 
 type FieldKey = (typeof FIELDS)[number]["key"];
-//type FieldKey = "date" | "description" | "amount"; value of above
 const SIGNAL_WORDS = [
   "date",
   "amount",
@@ -93,12 +80,17 @@ const SIGNAL_WORDS = [
   "transaction",
 ];
 
-const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
+const CSVImportModal = ({
+  isOpen,
+  onClose,
+  onImport,
+  sourceSuggestions,
+}: CSVImportModalProps) => {
   const [csvData, setCsvData] = useState<CSVData | null>(null);
   const [mapping, setMapping] = useState<Partial<Record<FieldKey, string>>>({});
   const [pendingField, setPendingField] = useState<FieldKey | null>(null);
-  const [headerIdx, setHeaderIdx] = useState<number>(0);
-  const [detectedIdx, setDetectedIdx] = useState<number>(0);
+  const [detectedPreset, setDetectedPreset] = useState<CSVPreset | null>(null);
+  const [source, setSource] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   //reset state when modal closes
@@ -108,8 +100,8 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
         setCsvData(null);
         setMapping({});
         setPendingField(null);
-        setHeaderIdx(0);
-        setDetectedIdx(0);
+        setDetectedPreset(null);
+        setSource("");
         if (fileRef.current) fileRef.current.value = ""; //get rid of uploaded file
       }, 200); //wait for transition
     }
@@ -153,25 +145,13 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
       .slice(headerIdx + 1)
       .filter((l) => l.trim().length > 0)
       .map(parseLine);
-    const previewRows = allRows.slice(0, 5);
+    // const previewRows = allRows.slice(0, 5);
     return {
       headers,
-      previewRows,
+      // previewRows,
       allRows,
     };
   };
-
-  //   const nudgeHeader = (text: string, delta: number) => {
-  //     const next = Math.max(
-  //       0,
-  //       Math.min(csvData?.allRows.length - 2, headerIdx + delta),
-  //     );
-  //     setHeaderIdx(next);
-  //     const parsed = parseCSV(text, headerIdx);
-  //     if (parsed) {
-  //       setCsvData(parsed);
-  //     }
-  //   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log("file input changed");
@@ -182,6 +162,8 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
       const text = event.target?.result as string;
       const parsed = parseCSV(text, findHeaderRowIndex(text));
       if (parsed) {
+        const match = CSV_PRESETS.find((p) => p.detect(parsed.headers));
+        setDetectedPreset(match ?? null);
         setCsvData(parsed);
       }
     };
@@ -201,6 +183,22 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
 
   const handleConfirm = () => {
     if (!csvData) return;
+
+    const resolvedSource = source.trim() || null;
+
+    if (detectedPreset) {
+      const newTransactions = csvData.allRows
+        .flatMap((row) => detectedPreset.mapRow(row, csvData.headers))
+        .map((mapped) => ({
+          ...mapped,
+          status: "Completed" as Status,
+          source: resolvedSource,
+        }));
+      onImport(newTransactions);
+      onClose();
+      return;
+    }
+
     const newTransactions = csvData.allRows.map((row) => {
       const dateStr =
         row[csvData.headers.indexOf(mapping.date as string)] || "";
@@ -239,7 +237,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
         category: null,
         amount: isNaN(cleanAmount) ? 0 : cleanAmount,
         status: "Completed" as Status,
-        source: null
+        source: resolvedSource,
       };
     });
     onImport(newTransactions);
@@ -247,8 +245,16 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
   };
   if (!isOpen) return null;
   const allMapped = FIELDS.every((f) => mapping[f.key]);
+
+  // Pre-compute preview rows for detected preset
+  const presetPreviewRows =
+    detectedPreset && csvData
+      ? csvData.allRows
+          .flatMap((row) => detectedPreset.mapRow(row, csvData.headers))
+      : null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-10 flex items-center justify-center p-4 sm:p-6">
       {/*Backdrop for modal */}
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
@@ -291,10 +297,93 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
               />
             </div>
           </div>
+        ) : detectedPreset && presetPreviewRows ? (
+          <>
+            {/* Preset detected header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+              <h2 className="text-[15px] font-semibold text-gray-900 tracking-tight">
+                {detectedPreset.name} Detected
+              </h2>
+              <div className="w-48">
+                <InputAutocomplete
+                  value={source}
+                  onChange={setSource}
+                  onCommit={setSource}
+                  suggestions={sourceSuggestions}
+                  placeholder="Source (optional)"
+                />
+              </div>
+            </div>
+
+            {/* Preset preview table */}
+            <div className="border-t border-b border-gray-100 flex flex-col min-h-50">
+              <div className="shrink-0 px-6 py-2 bg-gray-50/80 border-b border-gray-100 flex items-center">
+                <span className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">
+                  Preview · {presetPreviewRows.length} rows
+                </span>
+              </div>
+              <div className="overflow-auto flex-1">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr>
+                      {(["date", "description", "amount"] as const).map(
+                        (col) => (
+                          <th
+                            key={col}
+                            className="py-3 px-4 font-normal text-[11px] uppercase tracking-wider border-b border-gray-200 text-gray-500 whitespace-nowrap"
+                          >
+                            {col}
+                          </th>
+                        ),
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {presetPreviewRows.map((row, i) => (
+                      <tr
+                        key={i}
+                        className="hover:bg-gray-50/50 transition-colors"
+                      >
+                        <td className="py-2.5 px-4 text-[13px] border-b border-gray-50 text-gray-900 whitespace-nowrap">
+                          {row.date}
+                        </td>
+                        <td className="py-2.5 px-4 text-[13px] border-b border-gray-50 text-gray-900 max-w-64 truncate">
+                          {row.description}
+                        </td>
+                        <td
+                          className={`py-2.5 px-4 text-[13px] border-b border-gray-50 whitespace-nowrap`}
+                        >
+                          {row.amount < 0
+                            ? `-$${Math.abs(row.amount).toFixed(2)}`
+                            : `+$${row.amount.toFixed(2)}`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 flex justify-end items-center gap-2 mt-auto">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 text-[13px] font-medium rounded-md transition-colors shadow-sm bg-gray-900 text-white hover:bg-gray-800"
+              >
+                Import Transactions
+              </button>
+            </div>
+          </>
         ) : (
           <>
             {/*Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-start bg-white">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
               <div>
                 <h2 className="text-[15px] font-semibold text-gray-900 tracking-tight">
                   Map Columns
@@ -304,12 +393,15 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
                   the table preview.
                 </p>
               </div>
-              <button
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                onClick={onClose}
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="w-48">
+                <InputAutocomplete
+                  value={source}
+                  onChange={setSource}
+                  onCommit={setSource}
+                  suggestions={sourceSuggestions}
+                  placeholder="Source (optional)"
+                />
+              </div>
             </div>
             {/*Field Pills */}
             <div className="px-6 py-4 flex gap-2 flex-wrap">
@@ -349,7 +441,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
             <div className="overflow-x-auto border-t border-b border-gray-100 flex-1 min-h-50">
               <div className="px-6 py-2 bg-gray-50/80 border-b border-gray-100 flex items-center">
                 <span className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">
-                  Preview · {csvData.previewRows.length} rows
+                  Preview · {csvData.allRows.length} rows
                 </span>
               </div>
               <table className="w-full text-left border-collapse">
@@ -390,7 +482,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {csvData.previewRows.map((row, i) => (
+                  {csvData.allRows.map((row, i) => (
                     <tr
                       key={i}
                       className="hover:bg-gray-50/50 transition-colors"
