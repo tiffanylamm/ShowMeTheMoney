@@ -1,11 +1,6 @@
 export type Status = "Completed" | "Refunding" | "Owed";
 
-export type Category = 
- | 'Income'
- | 'Subscriptions'
- | 'Entertainment'
- | 'Shopping'
- | 'None'
+export type Category = string
 
 export type SortDirection = 'asc' | 'desc'
 

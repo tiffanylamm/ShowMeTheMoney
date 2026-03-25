@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useState, useRef } from "react";
 import { ArrowDown, ArrowUp, Check, Trash, X } from "lucide-react";
-import { Transaction, SortConfig, Category, Status } from "@/types/transaction";
+import { Transaction, SortConfig, Status } from "@/types/transaction";
 import StatusBadge from "./StatusBadge";
+import InputAutocomplete from "./InputAutocomplete"; 
 interface TransactionTableProps {
   transactions: Transaction[];
   sortConfig: SortConfig | null;
@@ -18,14 +19,6 @@ const localToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-
-const CATEGORIES: Category[] = [
-  "Income",
-  "Subscriptions",
-  "Entertainment",
-  "Shopping",
-  "None",
-];
 
 const STATUSES: Status[] = ["Completed", "Owed", "Refunding"];
 
@@ -55,6 +48,11 @@ const TransactionTable = ({
   const [editValue, setEditValue] = useState<string>("");
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
 
+  const allSuggestions = useMemo(() => {
+    const used = transactions.map((t) => t.category).filter(Boolean) as string[];
+    return Array.from(new Set(used));
+  }, [transactions]);
+
   //highlight all text in description on edit
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -78,6 +76,7 @@ const TransactionTable = ({
   };
 
   const commitEdit = () => {
+    console.log(`Commiting edit: ${editValue}`)
     if (!editingCell) return;
     const { id, field } = editingCell;
     if (field === "amount") {
@@ -94,7 +93,7 @@ const TransactionTable = ({
         onUpdate(id, { description: editValue.trim() });
       }
     } else if (field === "category") {
-      onUpdate(id, { category: editValue === "None" ? null : editValue as Category });
+      onUpdate(id, { category: editValue.trim() || null });
     } else if (field === "status") {
       onUpdate(id, { status: editValue as Status });
     }
@@ -259,22 +258,16 @@ const TransactionTable = ({
               </td>
               {/*New Category*/}
               <td className="py-2 px-3">
-                <select
-                  value={newTransaction.category ?? "None"}
-                  className={addInputClass}
-                  onChange={(e) =>
+                <InputAutocomplete
+                  value={newTransaction.category ?? ""}
+                  onChange={(val) =>
                     setNewTransaction({
                       ...newTransaction,
-                      category: e.target.value === "None" ? null : e.target.value as Category,
+                      category: val.trim() || null,
                     })
                   }
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  suggestions={allSuggestions}
+                />
               </td>
               {/*New Description*/}
               <td className="py-2 px-3">
@@ -407,28 +400,22 @@ const TransactionTable = ({
                   className={`${tdClass} text-gray-500`}
                   onClick={() =>
                     !isEditing(tx.id, "category") &&
-                    startEditing(tx.id, "category", tx.category ?? "None")
+                    startEditing(tx.id, "category", tx.category ?? "")
                   }
                 >
                   {isEditing(tx.id, "category") ? (
-                    <select
-                      ref={inputRef as React.RefObject<HTMLSelectElement>}
+                    <InputAutocomplete
                       value={editValue}
-                      onChange={(e) => {
-                        onUpdate(tx.id, {
-                          category: e.target.value === "None" ? null : e.target.value as Category,
-                        });
+                      onChange={setEditValue}
+                      onBlur={commitEdit}
+                      onCancel={() => { setEditingCell(null); setEditValue(""); }}
+                      onCommit={(val) => {
+                        onUpdate(tx.id, { category: val.trim() || null });
                         setEditingCell(null);
+                        setEditValue("");
                       }}
-                      onBlur={() => setEditingCell(null)}
-                      className={`${editInputClass} text-gray-500 bg-transparent`}
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                      suggestions={allSuggestions}
+                    />
                   ) : (
                     <span className="bock py-px">{tx.category ?? ""}</span>
                   )}
