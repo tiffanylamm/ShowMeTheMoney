@@ -49,6 +49,7 @@ function cleanupExpiredEntries() {
 // --- CORS ---
 const allowedOrigins = [
   process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
 ];
 
 function getCorsHeaders(origin: string | null) {
