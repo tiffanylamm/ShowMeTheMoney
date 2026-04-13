@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
-  const { date, description, category, amount, status, source, isGroup, parentId } = body;
+  const { date, description, category, amount, status, source, isGroup, parentId, createdAt } = body;
 
   if (!date || typeof date !== "string") {
     return Response.json({ error: "date is required and must be a string" }, { status: 400 });
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       amount: String(amount),
       status: status ?? "Completed",
       source: source ?? null,
-      createdAt: Date.now(),
+      createdAt: typeof createdAt === "number" ? createdAt : Date.now(),
       isGroup: isGroup ?? false,
       parentId: parentId ?? null,
       userId: session.user.id,
