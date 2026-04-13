@@ -74,8 +74,8 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
-// --- Middleware ---
-export async function middleware(request: NextRequest) {
+// --- Proxy ---
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get("origin");
 
