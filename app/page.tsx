@@ -337,10 +337,11 @@ const Home = () => {
     newTransactions: Omit<Transaction, "id" | "createdAt">[],
   ) => {
     const now = Date.now();
-    const transactionsComplete = newTransactions.map((tx, i) => ({
+    const sorted = [...newTransactions].sort((a, b) => b.date.localeCompare(a.date))
+    const transactionsComplete = sorted.map((tx, i) => ({
       ...tx,
       id: crypto.randomUUID(),
-      createdAt: now + i,
+      createdAt: now - i,
     }));
 
     Promise.all(
