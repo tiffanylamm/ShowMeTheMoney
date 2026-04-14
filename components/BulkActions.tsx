@@ -96,7 +96,7 @@ const BulkActions = ({
                         onAddToGroup(g.id);
                         closeAll();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors truncate"
+                      className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors truncate uppercase"
                     >
                       {g.description}
                     </button>
