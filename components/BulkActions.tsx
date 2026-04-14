@@ -6,20 +6,26 @@ import { Transaction, STATUSES } from "@/types/transaction";
 
 interface BulkActionsProps {
   selectedIds: Set<string>;
-  allTransactions: Transaction[];
   onBulkDelete: (ids: string[]) => void;
   onBulkUpdate: (ids: string[], updates: Partial<Transaction>) => void;
   onClearSelection: () => void;
+  onAddToGroup: (groupId: string) => void;
+  allGroups: Transaction[];
+  allCategories: string[];
+  allSources: string[];
 }
 
-type HoveredItem = "category" | "status" | "source" | null;
+type HoveredItem = "category" | "status" | "source" | "group" | null;
 
 const BulkActions = ({
   selectedIds,
-  allTransactions,
   onBulkDelete,
   onBulkUpdate,
   onClearSelection,
+  onAddToGroup,
+  allGroups,
+  allCategories,
+  allSources,
 }: BulkActionsProps) => {
   const [open, setOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<HoveredItem>(null);
@@ -27,18 +33,8 @@ const BulkActions = ({
 
   const ids = [...selectedIds];
 
-  const categorySuggestions = [
-    ...new Set(
-      allTransactions.map((t) => t.category).filter(Boolean) as string[],
-    ),
-  ];
-  const sourceSuggestions = [
-    ...new Set(
-      allTransactions
-        .map((t) => t.source)
-        .filter((s): s is string => s !== null),
-    ),
-  ];
+  const categorySuggestions = allCategories;
+  const sourceSuggestions = allSources;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -68,7 +64,7 @@ const BulkActions = ({
           setOpen(!open);
           setHoveredItem(null);
         }}
-        className="inline-flex items-center gap-1 px-2.5 h-6 text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1 px-2.5 h-7 text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors cursor-pointer"
       >
         Actions
         <ChevronDown className="w-3 h-3" />
@@ -76,6 +72,44 @@ const BulkActions = ({
 
       {open && (
         <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+          {/* Group */}
+          <div
+            className="relative"
+            onMouseEnter={() => setHoveredItem("group")}
+          >
+            <button className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between">
+              Group
+              <ChevronRight className="w-3 h-3 text-gray-400" />
+            </button>
+
+            {hoveredItem === "group" && (
+              <div
+                className="absolute left-full top-0 ml-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto"
+                onMouseEnter={() => setHoveredItem("group")}
+              >
+                {allGroups.length > 0 ? (
+                  allGroups.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => {
+                        if (disabled) return;
+                        onAddToGroup(g.id);
+                        closeAll();
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors truncate"
+                    >
+                      {g.description}
+                    </button>
+                  ))
+                ) : (
+                  <span className="px-3 py-1.5 text-[12px] text-gray-400 block">
+                    No groups yet
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Category */}
           <div
             className="relative"
@@ -88,7 +122,7 @@ const BulkActions = ({
 
             {hoveredItem === "category" && (
               <div
-                className="absolute left-full top-0 ml-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+                className="absolute left-full top-0 ml-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto"
                 onMouseEnter={() => setHoveredItem("category")}
               >
                 {categorySuggestions.length > 0 ? (
@@ -158,7 +192,7 @@ const BulkActions = ({
 
             {hoveredItem === "source" && (
               <div
-                className="absolute left-full top-0 ml-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+                className="absolute left-full top-0 ml-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto"
                 onMouseEnter={() => setHoveredItem("source")}
               >
                 {sourceSuggestions.length > 0 ? (

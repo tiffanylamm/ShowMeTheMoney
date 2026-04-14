@@ -25,6 +25,9 @@ const Home = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set([]));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([]));
+  const [allGroups, setAllGroups] = useState<Transaction[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [allSources, setAllSources] = useState<string[]>([]);
 
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
@@ -69,6 +72,16 @@ const Home = () => {
     [session?.user?.id],
   );
 
+  const fetchMetadata = useCallback(async () => {
+    if (!session?.user?.id) return;
+    const res = await fetch("/api/transactions?metadata=true");
+    if (!res.ok) return;
+    const data = await res.json();
+    setAllGroups(data.groups);
+    setAllCategories(data.categories);
+    setAllSources(data.sources);
+  }, [session?.user?.id]);
+
   // Debounce search — reset to page 1 on new query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -83,6 +96,7 @@ const Home = () => {
     if (!session?.user?.id) return;
     if (prevUserIdRef.current !== session.user.id) {
       prevUserIdRef.current = session.user.id;
+      fetchMetadata();
     }
     fetchPage({
       page: currentPage,
@@ -106,6 +120,15 @@ const Home = () => {
     setCurrentPage(1);
   };
 
+  const addMetadata = (updates: Partial<Transaction>) => {
+    if (updates.category && !allCategories.includes(updates.category)) {
+      setAllCategories((prev) => [...prev, updates.category!]);
+    }
+    if (updates.source && !allSources.includes(updates.source)) {
+      setAllSources((prev) => [...prev, updates.source!]);
+    }
+  };
+
   const handleAddTransaction = (
     newTransaction: Omit<Transaction, "id" | "createdAt">,
   ) => {
@@ -121,6 +144,7 @@ const Home = () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(transaction),
     }).then(() => {
+      addMetadata(newTransaction);
       setCurrentPage(1);
       // If already on page 1, currentPage state won't change so trigger manually
       fetchPage({
@@ -155,6 +179,10 @@ const Home = () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
+    }).then(() => {
+      if (updates.category !== undefined || updates.source !== undefined) {
+        fetchMetadata();
+      }
     });
   };
 
@@ -162,6 +190,9 @@ const Home = () => {
     fetch(`/api/transactions/${id}`, {
       method: "DELETE",
     }).then(() => {
+      if (allGroups.some((g) => g.id === id)) {
+        setAllGroups((prev) => prev.filter((g) => g.id !== id));
+      }
       const isLastOnPage = pageRows.length === 1 && currentPage > 1;
       const nextPage = isLastOnPage ? currentPage - 1 : currentPage;
       setChildRows((prev) => {
@@ -175,6 +206,7 @@ const Home = () => {
         sortBy: sortConfig?.key ?? null,
         sortDir: sortConfig?.direction ?? null,
       });
+      fetchMetadata();
       if (isLastOnPage) setCurrentPage(nextPage);
     });
 
@@ -256,6 +288,7 @@ const Home = () => {
       sortBy: sortConfig?.key ?? null,
       sortDir: sortConfig?.direction ?? null,
     });
+    setAllGroups((prev) => [createdGroup, ...prev]);
 
     return actualGroupId;
   };
@@ -392,6 +425,10 @@ const Home = () => {
         }),
       ),
     ).then(() => {
+      // import doesn't have categories or source 
+      // for (const tx of newTransactions) {
+      //   trackMetadata(tx);
+      // }
       setCurrentPage(1);
       fetchPage({
         page: 1,
@@ -478,6 +515,9 @@ const Home = () => {
             onUnlinkChild={handleUnlinkChild}
             onBulkDelete={handleBulkDelete}
             onBulkUpdate={handleBulkUpdate}
+            allGroups={allGroups}
+            allCategories={allCategories}
+            allSources={allSources}
           />
         </div>
         <div>
@@ -494,13 +534,6 @@ const Home = () => {
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}
           onImport={handleImportTransactions}
-          sourceSuggestions={[
-            ...new Set(
-              allTransactions
-                .map((t) => t.source)
-                .filter((s): s is string => s !== null),
-            ),
-          ]}
         />
       </div>
     </main>

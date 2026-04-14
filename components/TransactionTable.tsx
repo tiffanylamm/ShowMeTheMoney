@@ -38,6 +38,9 @@ interface TransactionTableProps {
   onUnlinkChild: (childId: string) => void;
   onBulkDelete: (ids: string[]) => void;
   onBulkUpdate: (ids: string[], updates: Partial<Transaction>) => void;
+  allGroups: Transaction[];
+  allCategories: string[];
+  allSources: string[];
 }
 
 const localToday = () => {
@@ -77,6 +80,9 @@ const TransactionTable = ({
   onUnlinkChild,
   onBulkDelete,
   onBulkUpdate,
+  allGroups,
+  allCategories,
+  allSources,
 }: TransactionTableProps) => {
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: localToday(),
@@ -280,17 +286,20 @@ const TransactionTable = ({
               const newGroupId = await onCreateGroup("New Group");
               pendingFocusIdRef.current = newGroupId;
             }}
-            className="flex items-center gap-1 px-2 h-6 text-[12px] text-white bg-gray-800 rounded transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2 h-7 text-[12px] text-white bg-gray-800 rounded transition-colors cursor-pointer"
           >
             <Layers className="w-3.5 h-3.5" />
             Merge
           </button>
           <BulkActions
             selectedIds={selectedIds}
-            allTransactions={allTransactions}
             onBulkDelete={onBulkDelete}
             onBulkUpdate={onBulkUpdate}
             onClearSelection={onClearSelection}
+            onAddToGroup={onAddToGroup}
+            allGroups={allGroups}
+            allCategories={allCategories}
+            allSources={allSources}
           />
       </div>
 

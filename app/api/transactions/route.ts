@@ -25,6 +25,32 @@ export async function GET(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
+
+  // Metadata branch — all groups, distinct categories, distinct sources
+  if (url.searchParams.get("metadata") === "true") {
+    const userFilter = eq(transactions.userId, session.user.id);
+    const [groups, categories, sources] = await Promise.all([
+      db
+        .select()
+        .from(transactions)
+        .where(and(userFilter, eq(transactions.isGroup, true)))
+        .orderBy(desc(transactions.createdAt)),
+      db
+        .selectDistinct({ category: transactions.category })
+        .from(transactions)
+        .where(userFilter),
+      db
+        .selectDistinct({ source: transactions.source })
+        .from(transactions)
+        .where(userFilter),
+    ]);
+    return Response.json({
+      groups,
+      categories: categories.map((r) => r.category).filter(Boolean),
+      sources: sources.map((r) => r.source).filter(Boolean),
+    });
+  }
+
   const parentIdParam = url.searchParams.get("parentId");
 
   // Child fetch branch — return children of a group, no pagination

@@ -2,13 +2,11 @@ import React, { useRef, useState, useEffect } from "react";
 import { Transaction, Status } from "@/types/transaction";
 import { Upload, X } from "lucide-react";
 import { CSV_PRESETS, CSVPreset } from "@/lib/csvPresets";
-import InputAutocomplete from "@/components/InputAutocomplete";
 
 interface CSVImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (transactions: Omit<Transaction, "id" | "createdAt">[]) => void;
-  sourceSuggestions: string[];
 }
 
 interface CSVData {
@@ -83,13 +81,11 @@ const CSVImportModal = ({
   isOpen,
   onClose,
   onImport,
-  sourceSuggestions,
 }: CSVImportModalProps) => {
   const [csvData, setCsvData] = useState<CSVData | null>(null);
   const [mapping, setMapping] = useState<Partial<Record<FieldKey, string>>>({});
   const [pendingField, setPendingField] = useState<FieldKey | null>(null);
   const [detectedPreset, setDetectedPreset] = useState<CSVPreset | null>(null);
-  const [source, setSource] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   //reset state when modal closes
@@ -100,7 +96,6 @@ const CSVImportModal = ({
         setMapping({});
         setPendingField(null);
         setDetectedPreset(null);
-        setSource("");
         if (fileRef.current) fileRef.current.value = ""; //get rid of uploaded file
       }, 200); //wait for transition
     }
@@ -183,15 +178,13 @@ const CSVImportModal = ({
   const handleConfirm = () => {
     if (!csvData) return;
 
-    const resolvedSource = source.trim() || null;
-
     if (detectedPreset) {
       const newTransactions = csvData.allRows
         .flatMap((row) => detectedPreset.mapRow(row, csvData.headers))
         .map((mapped) => ({
           ...mapped,
           status: "Completed" as Status,
-          source: resolvedSource,
+          source: null,
           isGroup: false,
           parentId: null,
         }));
@@ -238,7 +231,7 @@ const CSVImportModal = ({
         category: null,
         amount: isNaN(cleanAmount) ? 0 : cleanAmount,
         status: "Completed" as Status,
-        source: resolvedSource,
+        source: null,
         isGroup: false,
         parentId: null,
       };
@@ -308,15 +301,6 @@ const CSVImportModal = ({
               <h2 className="text-[15px] font-semibold text-gray-900 tracking-tight">
                 {detectedPreset.name} Detected
               </h2>
-              <div className="w-48">
-                <InputAutocomplete
-                  value={source}
-                  onChange={setSource}
-                  onCommit={setSource}
-                  suggestions={sourceSuggestions}
-                  placeholder="Source (optional)"
-                />
-              </div>
             </div>
 
             {/* Preset preview table */}
@@ -396,15 +380,6 @@ const CSVImportModal = ({
                   Click a field below, then click the matching column header in
                   the table preview.
                 </p>
-              </div>
-              <div className="w-48">
-                <InputAutocomplete
-                  value={source}
-                  onChange={setSource}
-                  onCommit={setSource}
-                  suggestions={sourceSuggestions}
-                  placeholder="Source (optional)"
-                />
               </div>
             </div>
             {/*Field Pills */}
