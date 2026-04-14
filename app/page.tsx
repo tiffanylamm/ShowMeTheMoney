@@ -261,6 +261,10 @@ const Home = () => {
   const handleAddToGroup = (groupId: string) => {
     if (selectedUngroupedIds.length === 0) return;
 
+    const addedTransactions = selectedUngroupedIds
+      .map((id) => allTransactions.find((tx) => tx.id === id)!)
+      .filter(Boolean);
+
     clearSelected();
 
     Promise.all(
@@ -271,14 +275,23 @@ const Home = () => {
           body: JSON.stringify({ parentId: groupId }),
         }),
       ),
-    ).then(() =>
+    ).then(() => {
+      if (childRows[groupId]) {
+        const updatedChildren = [
+          ...childRows[groupId],
+          ...addedTransactions.map((tx) => ({ ...tx, parentId: groupId })),
+        ];
+        setChildRows((prev) => ({ ...prev, [groupId]: updatedChildren }));
+        handleUpdateTransaction(groupId, computeGroupFields(updatedChildren));
+      }
+
       fetchPage({
         page: currentPage,
         search: debouncedSearch,
         sortBy: sortConfig?.key ?? null,
         sortDir: sortConfig?.direction ?? null,
-      }),
-    );
+      });
+    });
   };
 
   const handleUnlinkChild = (childId: string) => {
