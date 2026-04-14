@@ -33,7 +33,7 @@ interface TransactionTableProps {
   onToggleSelect: (id: string) => void;
   onSelectAll: (ids: string[]) => void;
   onClearSelection: () => void;
-  onCreateGroup: (name: string) => void;
+  onCreateGroup: (name: string) => Promise<string>;
   onAddToGroup: (groupId: string) => void;
   onUnlinkChild: (childId: string) => void;
   onBulkDelete: (ids: string[]) => void;
@@ -88,7 +88,7 @@ const TransactionTable = ({
     isGroup: false,
     parentId: null,
   });
-  const [groupInput, setGroupInput] = useState("");
+  const pendingFocusIdRef = useRef<string | null>(null);
   const [editingCell, setEditingCell] = useState<{
     id: string;
     field: EditableFields;
@@ -132,6 +132,15 @@ const TransactionTable = ({
     () => transactions.filter((tx) => tx.isGroup),
     [transactions],
   );
+
+  useEffect(() => {
+    if (pendingFocusIdRef.current) {
+      const id = pendingFocusIdRef.current;
+      pendingFocusIdRef.current = null;
+      setEditingCell({ id, field: "description" });
+      setEditValue("New Group");
+    }
+  }, [transactions]);
 
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -261,54 +270,28 @@ const TransactionTable = ({
   return (
     <div className="w-full">
       {/* Toolbar — always reserves space to prevent table shift */}
-      <div className={`flex items-center gap-2 mb-3 flex-wrap h-8 ${selectedIds.size === 0 ? "invisible" : ""}`}>
-          <span className="text-[12px] text-gray-400">
+      <div className="flex items-center gap-2 mb-3 flex-wrap h-8">
+          <span className="text-[12px] text-gray-400 tabular-nums w-[70px] shrink-0">
             {selectedUngroupedIds.length} selected
           </span>
-          {selectedUngroupedIds.length >= 1 && (
-            <>
-              <div className="flex items-center gap-1">
-                <InputAutocomplete
-                  value={groupInput}
-                  onChange={setGroupInput}
-                  suggestions={existingGroups.map((g) => g.description)}
-                  placeholder="Group as…"
-                  autoFocus={false}
-                  onCancel={() => setGroupInput("")}
-                  onCommit={(val) => {
-                    const trimmed = val.trim();
-                    if (!trimmed) return;
-                    const existing = existingGroups.find(
-                      (g) => g.description === trimmed,
-                    );
-                    if (existing) {
-                      onAddToGroup(existing.id);
-                    } else {
-                      onCreateGroup(trimmed);
-                    }
-                    setGroupInput("");
-                  }}
-                />
-              </div>
-              <BulkActions
-                selectedIds={selectedIds}
-                allTransactions={allTransactions}
-                onBulkDelete={onBulkDelete}
-                onBulkUpdate={onBulkUpdate}
-                onClearSelection={onClearSelection}
-              />
-            </>
-          )}
           <button
-            onClick={() => {
-              onClearSelection();
-              setGroupInput("");
+            onClick={async () => {
+              if (selectedUngroupedIds.length < 1) return;
+              const newGroupId = await onCreateGroup("New Group");
+              pendingFocusIdRef.current = newGroupId;
             }}
-            className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors"
-            aria-label="Clear selection"
+            className="flex items-center gap-1 px-2 h-6 text-[12px] text-white bg-gray-800 rounded transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <Layers className="w-3.5 h-3.5" />
+            Merge
           </button>
+          <BulkActions
+            selectedIds={selectedIds}
+            allTransactions={allTransactions}
+            onBulkDelete={onBulkDelete}
+            onBulkUpdate={onBulkUpdate}
+            onClearSelection={onClearSelection}
+          />
       </div>
 
       <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-16rem)]">

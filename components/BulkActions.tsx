@@ -54,7 +54,7 @@ const BulkActions = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (selectedIds.size === 0) return null;
+  const disabled = selectedIds.size === 0;
 
   const closeAll = () => {
     setOpen(false);
@@ -68,7 +68,7 @@ const BulkActions = ({
           setOpen(!open);
           setHoveredItem(null);
         }}
-        className="inline-flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+        className="inline-flex items-center gap-1 px-2.5 h-6 text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors cursor-pointer"
       >
         Actions
         <ChevronDown className="w-3 h-3" />
@@ -96,6 +96,7 @@ const BulkActions = ({
                     <button
                       key={c}
                       onClick={() => {
+                        if (disabled) return;
                         onBulkUpdate(ids, { category: c });
                         closeAll();
                       }}
@@ -132,6 +133,7 @@ const BulkActions = ({
                   <button
                     key={s}
                     onClick={() => {
+                      if (disabled) return;
                       onBulkUpdate(ids, { status: s });
                       closeAll();
                     }}
@@ -164,6 +166,7 @@ const BulkActions = ({
                     <button
                       key={s}
                       onClick={() => {
+                        if (disabled) return;
                         onBulkUpdate(ids, { source: s });
                         closeAll();
                       }}
@@ -189,6 +192,7 @@ const BulkActions = ({
           <button
             onMouseEnter={() => setHoveredItem(null)}
             onClick={() => {
+              if (disabled) return;
               onBulkDelete(ids);
               closeAll();
             }}

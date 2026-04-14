@@ -213,7 +213,7 @@ const Home = () => {
 
   const clearSelected = () => setSelectedIds(new Set());
 
-  const handleCreateGroup = async (name: string) => {
+  const handleCreateGroup = async (name: string): Promise<string> => {
     const children = selectedUngroupedIds.map(
       (id) => allTransactions.find((tx) => tx.id === id)!,
     );
@@ -235,7 +235,7 @@ const Home = () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(groupTx),
     });
-    if (!groupRes.ok) return;
+    if (!groupRes.ok) return "";
 
     const createdGroup = await groupRes.json();
     const actualGroupId = createdGroup.id;
@@ -250,12 +250,14 @@ const Home = () => {
       ),
     );
 
-    fetchPage({
+    await fetchPage({
       page: currentPage,
       search: debouncedSearch,
       sortBy: sortConfig?.key ?? null,
       sortDir: sortConfig?.direction ?? null,
     });
+
+    return actualGroupId;
   };
 
   const handleAddToGroup = (groupId: string) => {
