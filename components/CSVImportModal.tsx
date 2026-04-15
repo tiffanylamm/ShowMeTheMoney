@@ -270,7 +270,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
               </button>
             </div>
             {/*Upload Container */}
-            <div className="border-2 w-full max-w-md p-12 border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-[#1b1b1b]/50 flex flex-col items-center">
+            <div className="border-2 w-full max-w-md p-12 border-gray-200 dark:border-gray-700 rounded-lg flex flex-col items-center">
               <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-3" />
               <h3 className="text-[14px] font-medium text-gray-900 dark:text-foreground mb-1">
                 Upload CSV
@@ -304,7 +304,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
 
             {/* Preset preview table */}
             <div className="border-t border-b border-gray-100 dark:border-gray-800 flex flex-col min-h-50">
-              <div className="shrink-0 px-6 py-2 bg-gray-50/80 dark:bg-[#1b1b1b]/80 border-b border-gray-100 dark:border-gray-800 flex items-center">
+              <div className="shrink-0 px-6 py-2 bg-gray-50/80 dark:bg-neutral-800 border-b border-gray-100 dark:border-gray-800 flex items-center">
                 <span className="text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-400 font-medium">
                   Preview · {presetPreviewRows.length} rows
                 </span>
@@ -352,7 +352,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 dark:bg-[#1b1b1b]/50 flex justify-end items-center gap-2 mt-auto">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-neutral-800 flex justify-end items-center gap-2 mt-auto">
               <button
                 onClick={onClose}
                 className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-foreground transition-colors"
