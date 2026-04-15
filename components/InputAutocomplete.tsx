@@ -45,7 +45,7 @@ const InputAutocomplete = ({
       openOnInputClick
     >
       <Autocomplete.Input
-        className={`w-full bg-transparent border border-gray-200 focus:ring-1 focus:ring-gray-200 px-3 py-1 text-[13px] text-gray-900 placeholder-gray-400 transition-colors outline-none rounded`}
+        className={`w-full bg-transparent border border-gray-200 dark:border-gray-700 focus:ring-1 focus:ring-gray-200 dark:focus:ring-gray-600 px-3 py-1 text-[13px] text-gray-900 dark:text-foreground placeholder-gray-400 dark:placeholder-gray-500 transition-colors outline-none rounded`}
         placeholder={placeholder ?? ""}
         onBlur={onBlur}
         onKeyDown={(e) => {
@@ -67,7 +67,7 @@ const InputAutocomplete = ({
             style={{ zIndex: positionerZIndex }}
             className="data-anchor-hidden:invisible"
           >
-            <Autocomplete.Popup className="min-w-32 rounded border border-gray-200 bg-white py-1 shadow-md outline-none">
+            <Autocomplete.Popup className="min-w-32 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1b1b1b] py-1 shadow-md outline-none">
               <Autocomplete.List>
                 {filtered.map((item) => (
                   <Autocomplete.Item
@@ -75,7 +75,7 @@ const InputAutocomplete = ({
                     value={item}
                     className="group cursor-pointer px-1 outline-none select-none"
                   >
-                    <div className="px-2 py-1.5 text-[13px] text-gray-700 rounded transition-colors group-data-highlighted:bg-gray-100">
+                    <div className="px-2 py-1.5 text-[13px] text-gray-600 dark:text-gray-400 rounded transition-colors group-data-highlighted:bg-gray-100 dark:group-data-highlighted:bg-gray-800">
                       {item}
                     </div>
                   </Autocomplete.Item>
