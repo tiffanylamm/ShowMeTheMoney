@@ -6,9 +6,9 @@ interface StatusBadgeProps {
 
 const StatusBadge = ({ status }: StatusBadgeProps) => {
   const styles = {
-    Completed: "bg-emerald-50 text-emerald-600",
-    Refunding: "bg-amber-50 text-amber-600",
-    Owed: "bg-rose-50 text-rose-600",
+    Completed: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400",
+    Refunding: "bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400",
+    Owed: "bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400",
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium tracking-wide ${styles[status]}`}>

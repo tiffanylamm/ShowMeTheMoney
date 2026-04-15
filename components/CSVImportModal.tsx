@@ -41,25 +41,28 @@ const FIELD_STYLES: Record<
   }
 > = {
   date: {
-    bg: "bg-blue-50",
+    bg: "bg-blue-50 dark:bg-blue-950",
     ring: "ring-blue-500",
     border: "border-blue-500",
-    text: "text-blue-700",
-    hover: "hover:bg-blue-50 hover:text-blue-700",
+    text: "text-blue-700 dark:text-blue-300",
+    hover:
+      "hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950 dark:hover:text-blue-300",
   },
   description: {
-    bg: "bg-purple-50",
+    bg: "bg-purple-50 dark:bg-purple-950",
     ring: "ring-purple-500",
     border: "border-purple-500",
-    text: "text-purple-700",
-    hover: "hover:bg-purple-50 hover:text-purple-700",
+    text: "text-purple-700 dark:text-purple-300",
+    hover:
+      "hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-950 dark:hover:text-purple-300",
   },
   amount: {
-    bg: "bg-pink-50",
+    bg: "bg-pink-50 dark:bg-pink-950",
     ring: "ring-pink-500",
     border: "border-pink-500",
-    text: "text-pink-700",
-    hover: "hover:bg-pink-50 hover:text-pink-700",
+    text: "text-pink-700 dark:text-pink-300",
+    hover:
+      "hover:bg-pink-50 hover:text-pink-700 dark:hover:bg-pink-950 dark:hover:text-pink-300",
   },
 };
 
@@ -77,11 +80,7 @@ const SIGNAL_WORDS = [
   "transaction",
 ];
 
-const CSVImportModal = ({
-  isOpen,
-  onClose,
-  onImport,
-}: CSVImportModalProps) => {
+const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
   const [csvData, setCsvData] = useState<CSVData | null>(null);
   const [mapping, setMapping] = useState<Partial<Record<FieldKey, string>>>({});
   const [pendingField, setPendingField] = useState<FieldKey | null>(null);
@@ -254,33 +253,33 @@ const CSVImportModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/*Backdrop for modal */}
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       {/*Modal content */}
-      <div className="relative w-full max-w-3xl bg-white rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-[#1b1b1b] rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
         {!csvData ? (
           <div className="p-8 flex flex-col items-center justify-center text-center">
             {/*Close Button */}
             <div className="flex justify-end w-full mb-4">
               <button
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 transition-colors p-1"
                 onClick={onClose}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             {/*Upload Container */}
-            <div className="border-2 w-full max-w-md p-12 border-dashed border-gray-200 rounded-lg bg-gray-50/50 flex flex-col items-center">
-              <Upload className="w-8 h-8 text-gray-400 mb-3" />
-              <h3 className="text-[14px] font-medium text-gray-900 mb-1">
+            <div className="border-2 w-full max-w-md p-12 border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-[#1b1b1b]/50 flex flex-col items-center">
+              <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-3" />
+              <h3 className="text-[14px] font-medium text-gray-900 dark:text-foreground mb-1">
                 Upload CSV
               </h3>
-              <p className="text-[13px] text-gray-500 mb-6">
+              <p className="text-[13px] text-gray-600 dark:text-gray-400 mb-6">
                 Select a CSV file to import transactions
               </p>
               <button
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-[13px] font-medium rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm"
+                className="px-4 py-2 bg-white dark:bg-[#1b1b1b] border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-[13px] font-medium rounded-md hover:bg-gray-50 dark:hover:bg-[#424242] hover:text-gray-900 dark:hover:text-foreground transition-colors shadow-sm"
                 onClick={() => fileRef.current?.click()}
               >
                 Select File
@@ -297,28 +296,28 @@ const CSVImportModal = ({
         ) : detectedPreset && presetPreviewRows ? (
           <>
             {/* Preset detected header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
-              <h2 className="text-[15px] font-semibold text-gray-900 tracking-tight">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-[#1b1b1b]">
+              <h2 className="text-[15px] font-semibold text-gray-900 dark:text-foreground tracking-tight">
                 {detectedPreset.name} Detected
               </h2>
             </div>
 
             {/* Preset preview table */}
-            <div className="border-t border-b border-gray-100 flex flex-col min-h-50">
-              <div className="shrink-0 px-6 py-2 bg-gray-50/80 border-b border-gray-100 flex items-center">
-                <span className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">
+            <div className="border-t border-b border-gray-100 dark:border-gray-800 flex flex-col min-h-50">
+              <div className="shrink-0 px-6 py-2 bg-gray-50/80 dark:bg-[#1b1b1b]/80 border-b border-gray-100 dark:border-gray-800 flex items-center">
+                <span className="text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-400 font-medium">
                   Preview · {presetPreviewRows.length} rows
                 </span>
               </div>
               <div className="overflow-auto flex-1">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-white z-10">
+                  <thead className="sticky top-0 bg-white dark:bg-[#1b1b1b] z-10">
                     <tr>
                       {(["date", "description", "amount"] as const).map(
                         (col) => (
                           <th
                             key={col}
-                            className="py-3 px-4 font-normal text-[11px] uppercase tracking-wider border-b border-gray-200 text-gray-500 whitespace-nowrap"
+                            className="py-3 px-4 font-normal text-[11px] uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 whitespace-nowrap"
                           >
                             {col}
                           </th>
@@ -330,16 +329,16 @@ const CSVImportModal = ({
                     {presetPreviewRows.map((row, i) => (
                       <tr
                         key={i}
-                        className="hover:bg-gray-50/50 transition-colors"
+                        className="hover:bg-gray-50/50 dark:hover:bg-[#424242]/50 transition-colors"
                       >
-                        <td className="py-2.5 px-4 text-[13px] border-b border-gray-50 text-gray-900 whitespace-nowrap">
+                        <td className="py-2.5 px-4 text-[13px] border-b border-gray-50 dark:border-gray-800 text-gray-900 dark:text-foreground whitespace-nowrap">
                           {row.date}
                         </td>
-                        <td className="py-2.5 px-4 text-[13px] border-b border-gray-50 text-gray-900 max-w-64 truncate">
+                        <td className="py-2.5 px-4 text-[13px] border-b border-gray-50 dark:border-gray-800 text-gray-900 dark:text-foreground max-w-64 truncate">
                           {row.description}
                         </td>
                         <td
-                          className={`py-2.5 px-4 text-[13px] border-b border-gray-50 whitespace-nowrap`}
+                          className={`py-2.5 px-4 text-[13px] border-b border-gray-50 dark:border-gray-800 whitespace-nowrap`}
                         >
                           {row.amount < 0
                             ? `-$${Math.abs(row.amount).toFixed(2)}`
@@ -353,16 +352,16 @@ const CSVImportModal = ({
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 flex justify-end items-center gap-2 mt-auto">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-[#1b1b1b]/50 flex justify-end items-center gap-2 mt-auto">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirm}
-                className="px-4 py-2 text-[13px] font-medium rounded-md transition-colors shadow-sm bg-gray-900 text-white hover:bg-gray-800"
+                className="px-4 py-2 text-[13px] font-medium rounded-md transition-colors shadow-sm bg-gray-900 text-white hover:bg-gray-800 dark:bg-[#e3e3e3] dark:text-background dark:hover:bg-gray-200"
               >
                 Import Transactions
               </button>
@@ -371,12 +370,12 @@ const CSVImportModal = ({
         ) : (
           <>
             {/*Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-[#1b1b1b]">
               <div>
-                <h2 className="text-[15px] font-semibold text-gray-900 tracking-tight">
+                <h2 className="text-[15px] font-semibold text-gray-900 dark:text-foreground tracking-tight">
                   Map Columns
                 </h2>
-                <p className="text-[13px] text-gray-500 mt-0.5">
+                <p className="text-[13px] text-gray-600 dark:text-gray-400 mt-0.5">
                   Click a field below, then click the matching column header in
                   the table preview.
                 </p>
@@ -391,17 +390,19 @@ const CSVImportModal = ({
                   <button
                     key={f.key}
                     onClick={() => setPendingField(isPending ? null : f.key)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-all ${isPending ? `${FIELD_STYLES[f.key].bg} ${FIELD_STYLES[f.key].text} ring-1 ${FIELD_STYLES[f.key].ring} shadow-sm` : isMapped ? `${FIELD_STYLES[f.key].bg} ${FIELD_STYLES[f.key].text} border ${FIELD_STYLES[f.key].border}` : "bg-white text-gray-500 border border-gray-200 border-dashed hover:border-gray-300 hover:text-gray-700"}`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-all ${isPending ? `${FIELD_STYLES[f.key].bg} ${FIELD_STYLES[f.key].text} ring-1 ${FIELD_STYLES[f.key].ring} shadow-sm` : isMapped ? `${FIELD_STYLES[f.key].bg} ${FIELD_STYLES[f.key].text} border ${FIELD_STYLES[f.key].border}` : "bg-white dark:bg-[#1b1b1b] text-gray-600 dark:text-gray-400 border border-gray-400 dark:border-gray-700 border-dashed hover:border-solid"}`}
                   >
                     {f.label}
                     {isMapped && !isPending && (
                       <>
-                        <span className="text-gray-300">·</span>
-                        <span className="font-normal text-gray-500 truncate max-w-30">
+                        <span className="text-gray-400 dark:text-gray-500">
+                          ·
+                        </span>
+                        <span className="font-normal text-gray-600 dark:text-gray-400 truncate max-w-30">
                           {mapping[f.key]}
                         </span>
                         <X
-                          className="w-3 h-3 ml-0.5 text-gray-400 hover:text-gray-700"
+                          className="w-3 h-3 ml-0.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400"
                           onClick={(e) => {
                             e.stopPropagation();
                             const newMap = { ...mapping };
@@ -417,9 +418,9 @@ const CSVImportModal = ({
             </div>
 
             {/* Preview Table */}
-            <div className="overflow-x-auto border-t border-b border-gray-100 flex-1 min-h-50">
-              <div className="px-6 py-2 bg-gray-50/80 border-b border-gray-100 flex items-center">
-                <span className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">
+            <div className="overflow-x-auto border-t border-b border-gray-100 dark:border-gray-800 flex-1 min-h-50">
+              <div className="px-6 py-2 bg-gray-50/80 dark:bg-[#1b1b1b]/80 border-b border-gray-100 dark:border-gray-800 flex items-center">
+                <span className="text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-400 font-medium">
                   Preview · {csvData.allRows.length} rows
                 </span>
               </div>
@@ -443,7 +444,7 @@ const CSVImportModal = ({
                           onClick={() =>
                             isClickable && handleColumnClick(header)
                           }
-                          className={`py-3 px-4 font-normal text-[11px] uppercase tracking-wider border-b border-gray-200 select-none transition-colors whitespace-nowrap ${isClickable ? `cursor-pointer ${FIELD_STYLES[pendingField].hover}` : ""} ${mappedField ? "bg-gray-50 text-gray-900" : "text-gray-500"}`}
+                          className={`py-3 px-4 font-normal text-[11px] uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 select-none transition-colors whitespace-nowrap ${isClickable ? `cursor-pointer ${FIELD_STYLES[pendingField].hover}` : ""} ${mappedField ? "bg-gray-50 dark:bg-[#1b1b1b] text-gray-900 dark:text-foreground" : "text-gray-600 dark:text-gray-400"}`}
                         >
                           <div className="flex items-center gap-2">
                             {header}
@@ -464,7 +465,7 @@ const CSVImportModal = ({
                   {csvData.allRows.map((row, i) => (
                     <tr
                       key={i}
-                      className="hover:bg-gray-50/50 transition-colors"
+                      className="hover:bg-gray-50/50 dark:hover:bg-[#424242] transition-colors"
                     >
                       {row.map((cell, j) => {
                         const header = csvData.headers[j];
@@ -474,9 +475,13 @@ const CSVImportModal = ({
                         return (
                           <td
                             key={j}
-                            className={`py-2.5 px-4 text-[13px] border-b border-gray-50 whitespace-nowrap max-w-50 truncate ${mappedKey ? `text-gray-900 bg-blue-50 ${FIELD_STYLES[mappedKey].bg}` : "text-gray-400"}`}
+                            className={`py-2.5 px-4 text-[13px] border-b border-gray-50 dark:border-gray-800 whitespace-nowrap max-w-50 truncate ${mappedKey ? `text-gray-900 dark:text-foreground ${FIELD_STYLES[mappedKey].bg}` : "text-gray-600 dark:text-gray-400"}`}
                           >
-                            {cell || <span className="text-gray-300">—</span>}
+                            {cell || (
+                              <span className="text-gray-400 dark:text-gray-500">
+                                —
+                              </span>
+                            )}
                           </td>
                         );
                       })}
@@ -487,21 +492,21 @@ const CSVImportModal = ({
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 flex justify-between items-center mt-auto">
-              <span className="text-[13px] text-gray-500">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-[#1b1b1b]/50 flex justify-between items-center mt-auto">
+              <span className="text-[13px] text-gray-400 dark:text-gray-500">
                 {Object.keys(mapping).length} of {FIELDS.length} fields mapped
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                  className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-foreground transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirm}
                   disabled={!allMapped}
-                  className={`px-4 py-2 text-[13px] font-medium rounded-md transition-colors shadow-sm ${allMapped ? "bg-gray-900 text-white hover:bg-gray-800" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+                  className={`px-4 py-2 text-[13px] font-medium rounded-md transition-colors shadow-sm ${allMapped ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-foreground dark:text-background dark:hover:bg-gray-200" : "bg-gray-100 dark:bg-[#1b1b1b] text-gray-400 dark:text-gray-500 cursor-not-allowed"}`}
                 >
                   Import Transactions
                 </button>

@@ -49,15 +49,15 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center">
+    <main className="min-h-screen bg-white dark:bg-[#131314] flex items-center justify-center">
       <div className="w-full max-w-sm px-6">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-[#1b1b1b] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           {/* Header */}
           <div className="px-8 pt-8 pb-6 flex flex-col items-center gap-1">
-            <h1 className="text-xl font-semibold tracking-tight text-gray-900">
+            <h1 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-foreground">
               Transaction Tracker
             </h1>
-            <p className="text-[13px] text-gray-500">
+            <p className="text-[13px] text-gray-600 dark:text-gray-400">
               {tab === "sign-in"
                 ? "Sign in to your account"
                 : "Create a new account"}
@@ -65,7 +65,7 @@ export default function SignInPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-100 px-8">
+          <div className="flex border-b border-gray-100 dark:border-gray-800 px-8">
             {(["sign-in", "sign-up"] as Tab[]).map((t) => (
               <button
                 key={t}
@@ -75,8 +75,8 @@ export default function SignInPage() {
                 }}
                 className={`pb-2.5 mr-5 text-[13px] font-medium border-b-2 transition-colors ${
                   tab === t
-                    ? "border-gray-900 text-gray-900"
-                    : "border-transparent text-gray-400 hover:text-gray-600"
+                    ? "border-gray-900 text-gray-900 dark:border-[#e3e3e3] dark:text-foreground"
+                    : "border-transparent text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400"
                 }`}
               >
                 {t === "sign-in" ? "Sign In" : "Sign Up"}
@@ -91,7 +91,7 @@ export default function SignInPage() {
           >
             {tab === "sign-up" && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">
+                <label className="text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-400 font-medium">
                   Name
                 </label>
                 <input
@@ -100,13 +100,13 @@ export default function SignInPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   placeholder="Your name"
-                  className="w-full px-3 py-2 text-[13px] text-gray-900 border border-gray-200 rounded-md placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+                  className="w-full px-3 py-2 text-[13px] text-gray-900 dark:text-foreground bg-transparent border border-gray-200 dark:border-gray-700 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors"
                 />
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">
+              <label className="text-[11px] uppercase tracking-wider text-gray-600 font-medium">
                 Email
               </label>
               <input
@@ -115,12 +115,12 @@ export default function SignInPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full px-3 py-2 text-[13px] text-gray-900 border border-gray-200 rounded-md placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+                className="w-full px-3 py-2 text-[13px] text-gray-900 dark:text-foreground bg-transparent border border-gray-200 dark:border-gray-700 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">
+              <label className="text-[11px] uppercase tracking-wider text-gray-600 font-medium">
                 Password
               </label>
               <div className="relative">
@@ -129,24 +129,24 @@ export default function SignInPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 pr-10 text-[13px] text-gray-900 border border-gray-200 rounded-md placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+                  className="w-full px-3 py-2 pr-10 text-[13px] text-gray-900 dark:text-foreground bg-transparent border border-gray-200 dark:border-gray-700 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 hover:text-gray-600 transition-colors select-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 transition-colors select-none"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
 
-            {error && <p className="text-[12px] text-rose-600">{error}</p>}
+            {error && <p className="text-[12px] text-rose-600 dark:text-rose-400">{error}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 w-full px-4 py-2 text-[13px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="mt-1 w-full px-4 py-2 text-[13px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 dark:bg-[#e3e3e3] dark:text-background dark:hover:bg-gray-200 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
             >
               {loading
                 ? "Please wait…"
@@ -158,11 +158,11 @@ export default function SignInPage() {
 
           {/* Divider */}
           <div className="px-8 flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-[11px] text-gray-400 uppercase tracking-wider">
+            <div className="flex-1 h-px bg-gray-100 dark:bg-[#1b1b1b]" />
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               or
             </span>
-            <div className="flex-1 h-px bg-gray-100" />
+            <div className="flex-1 h-px bg-gray-100 dark:bg-[#1b1b1b]" />
           </div>
 
           {/* Google */}
@@ -174,7 +174,7 @@ export default function SignInPage() {
                   callbackURL: "/",
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
+              className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-2 text-[13px] font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
             >
               <GoogleIcon />
               Continue with Google

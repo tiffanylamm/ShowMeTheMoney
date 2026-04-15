@@ -420,35 +420,50 @@ const Home = () => {
           sortDir: sortConfig?.direction ?? null,
         });
       });
-  };
+  }; 
 
   if (isPending || !session) return null;
 
   return (
-    <main className="h-screen overflow-hidden bg-white text-gray-900 font-sans">
+    <main className="h-screen overflow-hidden text-gray-900 dark:text-foreground font-sans">
       <div className="max-w-5xl mx-auto px-6 py-12">
         {/* Header Area */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          {/* Main Logo */}
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Logo" width={28} height={28} />
-            <h1 className="text-xl font-semibold tracking-tight text-gray-900">
+            <img
+              src="/logo-dark.png"
+              alt="Logo"
+              width={28}
+              height={28}
+              className="dark:hidden"
+            />
+            <img
+              src="/logo-light.png"
+              alt="Logo"
+              width={28}
+              height={28}
+              className="hidden dark:block"
+            />
+            <h1 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-foreground">
               Transactions
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          {/* Header Toolbar */}
+          <div className="flex items-center">
             <div className="relative group">
-              <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-gray-600 transition-colors" />
+              <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-gray-600 dark:text-gray-500 dark:group-focus-within:text-gray-400 transition-colors" />
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-6 pr-2 py-1 w-48 text-[13px] bg-transparent border-0 border-b border-gray-200 focus:border-gray-400 focus:ring-0 outline-none transition-colors placeholder-gray-400"
+                className="pl-6 pr-2 py-1 w-48 text-[13px] bg-transparent border-0 border-b border-gray-400 focus:border-gray-600 dark:border-gray-500 dark:focus:border-gray-400 focus:ring-0 outline-none transition-colors placeholder-gray-400 dark:placeholder-gray-500"
               />
             </div>
 
             <button
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-gray-900 hover:bg-gray-50 dark:text-foreground dark:hover:bg-[#424242] rounded transition-colors"
               onClick={() => setIsImportModalOpen(true)}
             >
               <Upload className="w-4 h-4" />
@@ -456,7 +471,7 @@ const Home = () => {
             </button>
 
             <button
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-gray-900 hover:bg-gray-50 dark:text-foreground dark:hover:bg-[#424242] rounded transition-colors"
               onClick={() => setShowAddRow(true)}
             >
               <Plus className="w-4 h-4" />

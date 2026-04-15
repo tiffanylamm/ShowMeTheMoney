@@ -273,25 +273,25 @@ const TransactionTable = ({
   const renderSortIcon = (key: keyof Transaction) => {
     if (!sortConfig || sortConfig.key !== key) return null;
     return sortConfig.direction === "asc" ? (
-      <ArrowUp className="w-3 h-3 ml-1 inline-block text-gray-400" />
+      <ArrowUp className="w-3 h-3 ml-1 inline-block text-gray-400 dark:text-gray-500" />
     ) : (
-      <ArrowDown className="w-3 h-3 ml-1 inline-block text-gray-400" />
+      <ArrowDown className="w-3 h-3 ml-1 inline-block text-gray-400 dark:text-gray-500" />
     );
   };
 
   const isEditing = (id: string, field: EditableFields) =>
     editingCell?.id === id && editingCell?.field === field;
 
-  const thClass = `h-9 px-4 font-normal text-[11px] uppercase tracking-wider text-gray-500 border-b border-gray-200 select-none`;
-  const tdClass = `h-9 px-4 text-[13px] border-b border-gray-100 whitespace-nowrap`;
-  const addInputClass = `w-full bg-transparent border-0 border-b border-transparent hover:border-gray-200 focus:ring-0 p-1 text-[13px] text-gray-900 placeholder-gray-400 transition-colors outline-none`;
-  const editInputClass = `w-full bg-transparent border-0 outline-none text-[13px] text-gray-900 p-0 m-0 focus:ring-0 caret-gray-400`;
+  const thClass = `h-9 px-4 font-normal text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 select-none`;
+  const tdClass = `h-9 px-4 text-[13px] border-b border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 whitespace-nowrap`;
+  const addInputClass = `w-full bg-transparent border-0 border-b border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:ring-0 p-1 text-[13px] text-gray-900 dark:text-foreground placeholder-gray-400 dark:placeholder-gray-500 transition-colors outline-none`;
+  const editInputClass = `w-full bg-transparent border-0 outline-none text-[13px] text-gray-900 dark:text-foreground p-0 m-0 focus:ring-0 caret-gray-400 dark:caret-gray-500`;
 
   return (
     <div className="w-full">
       {/* Toolbar — always reserves space to prevent table shift */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap h-8">
-        <span className="text-[12px] text-gray-400 tabular-nums w-18 shrink-0">
+      <div className="flex items-center gap-1 mb-3 flex-wrap h-8">
+        <span className="text-[12px] text-gray-400 dark:text-gray-500 tabular-nums w-18 shrink-0">
           {selectedIds.size} selected
         </span>
         <button
@@ -300,7 +300,7 @@ const TransactionTable = ({
             const newGroupId = await onCreateGroup("New Group");
             pendingFocusIdRef.current = newGroupId;
           }}
-          className="flex items-center gap-1 px-2 h-7 text-[12px] text-white bg-gray-800 rounded transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-2 h-7 text-[12px] font-medium text-white bg-gray-800 dark:bg-[#e3e3e3] dark:text-background rounded transition-colors cursor-pointer"
         >
           <Layers className="w-3.5 h-3.5" />
           Merge
@@ -319,7 +319,7 @@ const TransactionTable = ({
           onClick={() => {
             onClearSelection();
           }}
-          className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors"
+          className="p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 transition-colors"
           aria-label="Clear selection"
         >
           <X className="w-4 h-4" />
@@ -332,7 +332,7 @@ const TransactionTable = ({
       >
         <table className="w-full text-left border-collapse">
           {/* Header */}
-          <thead className="sticky top-0 bg-white z-2">
+          <thead className="sticky top-0 bg-white dark:bg-[#131314] z-2">
             <tr>
               <th className={`${thClass} w-8`}>
                 {selectableIds.length > 0 && (
@@ -352,43 +352,43 @@ const TransactionTable = ({
                           onSelectAll(transactions.filter((tx) => !tx.isGroup));
                         }
                       }}
-                      className="w-3.5 h-3.5 accent-gray-700 cursor-pointer"
+                      className="w-3.5 h-3.5 accent-gray-700 dark:accent-gray-300 cursor-pointer"
                     />
                   </label>
                 )}
               </th>
               <th
-                className={`${thClass} cursor-pointer hover:bg-gray-50 w-32`}
+                className={`${thClass} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#424242] w-32`}
                 onClick={() => onSort("date")}
               >
                 Date {renderSortIcon("date")}
               </th>
               <th
-                className={`${thClass} cursor-pointer hover:bg-gray-50 min-w-50`}
+                className={`${thClass} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#424242] min-w-50`}
                 onClick={() => onSort("description")}
               >
                 Description {renderSortIcon("description")}
               </th>
               <th
-                className={`${thClass} cursor-pointer hover:bg-gray-50 w-40`}
+                className={`${thClass} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#424242] w-40`}
                 onClick={() => onSort("category")}
               >
                 Category {renderSortIcon("category")}
               </th>
               <th
-                className={`${thClass} cursor-pointer hover:bg-gray-50 text-right w-32`}
+                className={`${thClass} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#424242] text-right w-32`}
                 onClick={() => onSort("amount")}
               >
                 Amount {renderSortIcon("amount")}
               </th>
               <th
-                className={`${thClass} cursor-pointer hover:bg-gray-50 w-32`}
+                className={`${thClass} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#424242] w-32`}
                 onClick={() => onSort("status")}
               >
                 Status {renderSortIcon("status")}
               </th>
               <th
-                className={`${thClass} cursor-pointer hover:bg-gray-50 w-40`}
+                className={`${thClass} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#424242] w-40`}
                 onClick={() => onSort("source")}
               >
                 Source {renderSortIcon("source")}
@@ -399,8 +399,9 @@ const TransactionTable = ({
           <tbody>
             {/* Add Transaction Row */}
             {showAddRow && (
-              <tr className="bg-gray-50/50 border-b border-gray-200">
+              <tr className="bg-gray-50/50 dark:bg-[#1b1b1b]/50 border-b border-gray-200 dark:border-gray-700">
                 <td className="h-9 px-3" />
+                {/* Date */}
                 <td className="h-9 px-3">
                   <input
                     type="date"
@@ -415,6 +416,7 @@ const TransactionTable = ({
                     autoFocus
                   />
                 </td>
+                {/* Description */}
                 <td className="h-9 px-3">
                   <input
                     type="text"
@@ -429,6 +431,7 @@ const TransactionTable = ({
                     }
                   />
                 </td>
+                {/* Category */}
                 <td className="h-9 px-3">
                   <InputAutocomplete
                     value={newTransaction.category ?? ""}
@@ -443,6 +446,7 @@ const TransactionTable = ({
                     positionerZIndex={50}
                   />
                 </td>
+                {/* Amount */}
                 <td className="h-9 px-3">
                   <input
                     type="number"
@@ -458,6 +462,7 @@ const TransactionTable = ({
                     }
                   />
                 </td>
+                {/* Status */}
                 <td className="h-9 px-3">
                   <select
                     value={newTransaction.status}
@@ -476,6 +481,7 @@ const TransactionTable = ({
                     ))}
                   </select>
                 </td>
+                {/* Source */}
                 <td className="h-9 px-3">
                   <InputAutocomplete
                     value={newTransaction.source ?? ""}
@@ -490,12 +496,13 @@ const TransactionTable = ({
                     positionerZIndex={50}
                   />
                 </td>
+                {/* Extra */}
                 <td className="py-1.5 px-3 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={handleSaveNew}
                       aria-label="Save Transaction"
-                      className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"
+                      className="p-1 text-gray-400 hover:text-emerald-600 dark:text-gray-500 dark:hover:text-emerald-400 transition-colors"
                       disabled={
                         !newTransaction.description || !newTransaction.date
                       }
@@ -505,7 +512,7 @@ const TransactionTable = ({
                     <button
                       onClick={onCancelAdd}
                       aria-label="Cancel"
-                      className="p-1 text-gray-400 hover:text-rose-600 transition-colors"
+                      className="p-1 text-gray-400 hover:text-rose-600 dark:text-gray-500 dark:hover:text-rose-400 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -519,7 +526,7 @@ const TransactionTable = ({
               <tr>
                 <td
                   colSpan={8}
-                  className="py-8 text-center text-[13px] text-gray-500"
+                  className="py-8 text-center text-[13px] text-gray-400 dark:text-gray-500"
                 >
                   No transactions found.
                 </td>
@@ -542,8 +549,8 @@ const TransactionTable = ({
                     <tr
                       className={`group transition-colors ${
                         isSelected
-                          ? "bg-blue-50/60 hover:bg-blue-50"
-                          : "hover:bg-gray-50"
+                          ? "bg-blue-50/60 hover:bg-gray-50 dark:bg-[#282828] dark:hover:bg-[#424242]"
+                          : "hover:bg-gray-50 dark:hover:bg-[#424242]"
                       }`}
                     >
                       {/* Col 1: chevron for groups, checkbox for regular */}
@@ -551,7 +558,7 @@ const TransactionTable = ({
                         {tx.isGroup ? (
                           <button
                             onClick={() => onToggleExpand(tx.id)}
-                            className="flex text-gray-400 hover:text-gray-700 transition-colors"
+                            className="flex text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-foreground transition-colors"
                             aria-label={
                               isExpanded ? "Collapse group" : "Expand group"
                             }
@@ -568,7 +575,7 @@ const TransactionTable = ({
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => onToggleSelect(tx)}
-                              className="w-3.5 h-3.5 accent-gray-700 cursor-pointer"
+                              className="w-3.5 h-3.5 accent-gray-900 dark:accent-gray-300 cursor-pointer"
                             />
                           </label>
                         )}
@@ -576,7 +583,7 @@ const TransactionTable = ({
 
                       {/* Date */}
                       <td
-                        className={`${tdClass} text-gray-500`}
+                        className={`${tdClass}`}
                         onClick={() =>
                           !isEditing(tx.id, "date") &&
                           startEditing(tx.id, "date", display.date, tx.isGroup)
@@ -596,7 +603,7 @@ const TransactionTable = ({
                             }}
                             onBlur={commitEdit}
                             onKeyDown={handleKeyDown}
-                            className={`${editInputClass} text-gray-500`}
+                            className={`${editInputClass} text-gray-600 dark:text-gray-400`}
                           />
                         ) : (
                           <span className="block py-px">
@@ -607,7 +614,7 @@ const TransactionTable = ({
 
                       {/* Description */}
                       <td
-                        className={`${tdClass} font-medium text-gray-900`}
+                        className={`h-9 px-4 text-[13px] border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-900 dark:text-foreground font-medium`}
                         onClick={() =>
                           !isEditing(tx.id, "description") &&
                           startEditing(
@@ -632,7 +639,7 @@ const TransactionTable = ({
                           <span className="flex items-center gap-1.5 py-px">
                             <span className="uppercase">{tx.description}</span>
                             {tx.isGroup && tx.childCount !== undefined && (
-                              <span className="text-gray-400 text-[11px] font-normal">
+                              <span className="text-gray-400 dark:text-gray-500 text-[11px] font-normal">
                                 · {tx.childCount}{" "}
                                 {tx.childCount === 1
                                   ? "Transaction"
@@ -645,7 +652,7 @@ const TransactionTable = ({
 
                       {/* Category */}
                       <td
-                        className={`${tdClass} text-gray-500`}
+                        className={tdClass}
                         onClick={() =>
                           !isEditing(tx.id, "category") &&
                           startEditing(
@@ -682,7 +689,7 @@ const TransactionTable = ({
 
                       {/* Amount */}
                       <td
-                        className={`${tdClass} text-right font-medium`}
+                        className={`h-9 px-4 text-[13px] border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-900 dark:text-foreground font-medium text-right`}
                         onClick={() =>
                           !isEditing(tx.id, "amount") &&
                           startEditing(
@@ -745,7 +752,7 @@ const TransactionTable = ({
 
                       {/* Source */}
                       <td
-                        className={`${tdClass} text-gray-500`}
+                        className={tdClass}
                         onClick={() =>
                           !isEditing(tx.id, "source") &&
                           startEditing(
@@ -793,7 +800,7 @@ const TransactionTable = ({
                               ? "Delete group and all its transactions"
                               : "Delete"
                           }
-                          className="p-1 text-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                          className="p-1 text-gray-400 hover:text-rose-600 dark:text-gray-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
                           onClick={() => onDelete(tx.id)}
                         >
                           <Trash className="w-4 h-4" />
@@ -807,12 +814,12 @@ const TransactionTable = ({
                       children.map((child) => (
                         <tr
                           key={child.id}
-                          className="group hover:bg-gray-50/70 transition-colors"
+                          className="group hover:bg-gray-50/70 dark:hover:bg-[#424242] transition-colors"
                         >
                           <td className={`${tdClass} w-8`} />
 
                           {/* Date indented */}
-                          <td className={`${tdClass} text-gray-400`}>
+                          <td className={`${tdClass}`}>
                             <div className="flex items-center gap-1.5">
                               {isEditing(child.id, "date") ? (
                                 <input
@@ -832,7 +839,7 @@ const TransactionTable = ({
                                   }}
                                   onBlur={commitEdit}
                                   onKeyDown={handleKeyDown}
-                                  className={`${editInputClass} text-[12px] text-gray-400`}
+                                  className={`${editInputClass}`}
                                 />
                               ) : (
                                 <span
@@ -855,7 +862,7 @@ const TransactionTable = ({
 
                           {/* Description */}
                           <td
-                            className={`${tdClass} text-gray-900`}
+                            className={`${tdClass} dark:text-foreground`}
                             onClick={() =>
                               !isEditing(child.id, "description") &&
                               startEditing(
@@ -891,7 +898,7 @@ const TransactionTable = ({
 
                           {/* Category */}
                           <td
-                            className={`${tdClass} text-gray-400 text-[12px]`}
+                            className={`${tdClass}`}
                             onClick={() =>
                               !isEditing(child.id, "category") &&
                               startEditing(
@@ -930,7 +937,7 @@ const TransactionTable = ({
 
                           {/* Amount */}
                           <td
-                            className={`${tdClass} text-right text-[12px] text-gray-700`}
+                            className={`${tdClass} text-right`}
                             onClick={() =>
                               !isEditing(child.id, "amount") &&
                               startEditing(
@@ -952,7 +959,7 @@ const TransactionTable = ({
                                 onChange={(e) => setEditValue(e.target.value)}
                                 onBlur={commitEdit}
                                 onKeyDown={handleKeyDown}
-                                className={`${editInputClass} text-right text-[12px]`}
+                                className={`${editInputClass} text-right`}
                               />
                             ) : (
                               <span className="cursor-text block py-px">
@@ -987,7 +994,7 @@ const TransactionTable = ({
                                   setEditingCell(null);
                                 }}
                                 onBlur={() => setEditingCell(null)}
-                                className={`${editInputClass} bg-transparent text-[12px]`}
+                                className={`${editInputClass}`}
                               >
                                 {STATUSES.map((s) => (
                                   <option key={s} value={s}>
@@ -1004,7 +1011,7 @@ const TransactionTable = ({
 
                           {/* Source */}
                           <td
-                            className={`${tdClass} text-gray-400`}
+                            className={`${tdClass}`}
                             onClick={() =>
                               !isEditing(child.id, "source") &&
                               startEditing(
@@ -1046,7 +1053,7 @@ const TransactionTable = ({
                             <button
                               aria-label="Remove from group"
                               title="Remove from group"
-                              className="p-1 text-gray-300 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                              className="p-1 text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
                               onClick={() => onUnlinkChild(child.id)}
                             >
                               <Unlink className="w-3.5 h-3.5" />

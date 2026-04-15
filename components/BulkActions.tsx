@@ -57,6 +57,13 @@ const BulkActions = ({
     setHoveredItem(null);
   };
 
+  const actionsDropdownItem =
+    "w-full text-left px-3 py-1.5 text-[13px] text-gray-900 dark:text-foreground hover:bg-gray-50 dark:hover:bg-[#424242] transition-colors flex items-center justify-between";
+  const actionsDropdownHover =
+    "absolute left-full top-0 ml-1 w-48 bg-white dark:bg-[#1b1b1b] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto";
+  const actionsDropdownItemHoverItem =
+    "w-full text-left px-3 py-1.5 text-[13px] text-gray-900 dark:text-foreground hover:bg-gray-50 dark:hover:bg-[#424242] transition-colors";
+
   return (
     <div className="relative" ref={containerRef}>
       <button
@@ -64,27 +71,27 @@ const BulkActions = ({
           setOpen(!open);
           setHoveredItem(null);
         }}
-        className="inline-flex items-center gap-1 px-2.5 h-7 text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1 px-2.5 h-7 text-[12px] font-medium text-gray-900 hover:bg-gray-100 dark:text-foreground dark:hover:bg-[#424242] rounded transition-colors cursor-pointer"
       >
         Actions
         <ChevronDown className="w-3 h-3" />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+        <div className="absolute left-0 top-full mt-1 w-44 bg-white dark:bg-[#1b1b1b] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
           {/* Group */}
           <div
             className="relative"
             onMouseEnter={() => setHoveredItem("group")}
           >
-            <button className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between">
+            <button className={actionsDropdownItem}>
               Group
               <ChevronRight className="w-3 h-3 text-gray-400" />
             </button>
 
             {hoveredItem === "group" && (
               <div
-                className="absolute left-full top-0 ml-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto"
+                className={actionsDropdownHover}
                 onMouseEnter={() => setHoveredItem("group")}
               >
                 {allGroups.length > 0 ? (
@@ -96,13 +103,13 @@ const BulkActions = ({
                         onAddToGroup(g.id);
                         closeAll();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors truncate uppercase"
+                      className={`${actionsDropdownItemHoverItem} uppercase`}
                     >
                       {g.description}
                     </button>
                   ))
                 ) : (
-                  <span className="px-3 py-1.5 text-[12px] text-gray-400 block">
+                  <span className="px-3 py-1.5 text-[12px] text-gray-400 dark:text-gray-500 block">
                     No groups yet
                   </span>
                 )}
@@ -115,14 +122,14 @@ const BulkActions = ({
             className="relative"
             onMouseEnter={() => setHoveredItem("category")}
           >
-            <button className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between">
+            <button className={actionsDropdownItem}>
               Category
               <ChevronRight className="w-3 h-3 text-gray-400" />
             </button>
 
             {hoveredItem === "category" && (
               <div
-                className="absolute left-full top-0 ml-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto"
+                className={actionsDropdownHover}
                 onMouseEnter={() => setHoveredItem("category")}
               >
                 {categorySuggestions.length > 0 ? (
@@ -134,13 +141,13 @@ const BulkActions = ({
                         onBulkUpdate(ids, { category: c });
                         closeAll();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+                      className={actionsDropdownItemHoverItem}
                     >
                       {c}
                     </button>
                   ))
                 ) : (
-                  <span className="px-3 py-1.5 text-[12px] text-gray-400 block">
+                  <span className="px-3 py-1.5 text-[12px] text-gray-400 dark:text-gray-500 block">
                     No categories yet
                   </span>
                 )}
@@ -153,14 +160,14 @@ const BulkActions = ({
             className="relative"
             onMouseEnter={() => setHoveredItem("status")}
           >
-            <button className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between">
+            <button className={actionsDropdownItem}>
               Status
               <ChevronRight className="w-3 h-3 text-gray-400" />
             </button>
 
             {hoveredItem === "status" && (
               <div
-                className="absolute left-full top-0 ml-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+                className={actionsDropdownHover}
                 onMouseEnter={() => setHoveredItem("status")}
               >
                 {STATUSES.map((s) => (
@@ -171,7 +178,7 @@ const BulkActions = ({
                       onBulkUpdate(ids, { status: s });
                       closeAll();
                     }}
-                    className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+                    className={actionsDropdownItemHoverItem}
                   >
                     {s}
                   </button>
@@ -185,14 +192,14 @@ const BulkActions = ({
             className="relative"
             onMouseEnter={() => setHoveredItem("source")}
           >
-            <button className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between">
+            <button className={actionsDropdownItem}>
               Source
               <ChevronRight className="w-3 h-3 text-gray-400" />
             </button>
 
             {hoveredItem === "source" && (
               <div
-                className="absolute left-full top-0 ml-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto"
+                className={actionsDropdownHover}
                 onMouseEnter={() => setHoveredItem("source")}
               >
                 {sourceSuggestions.length > 0 ? (
@@ -204,13 +211,13 @@ const BulkActions = ({
                         onBulkUpdate(ids, { source: s });
                         closeAll();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+                      className={actionsDropdownItemHoverItem}
                     >
                       {s}
                     </button>
                   ))
                 ) : (
-                  <span className="px-3 py-1.5 text-[12px] text-gray-400 block">
+                  <span className="px-3 py-1.5 text-[12px] text-gray-400 dark:text-gray-500 block">
                     No sources yet
                   </span>
                 )}
@@ -220,7 +227,7 @@ const BulkActions = ({
 
           {/* Delete */}
           <div
-            className="border-t border-gray-100 my-1"
+            className="border-t border-gray-100 dark:border-gray-800 my-1"
             onMouseEnter={() => setHoveredItem(null)}
           />
           <button
@@ -230,7 +237,7 @@ const BulkActions = ({
               onBulkDelete(ids);
               closeAll();
             }}
-            className="w-full text-left px-3 py-1.5 text-[13px] text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 text-[13px] text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors flex items-center gap-2"
           >
             <Trash className="w-3.5 h-3.5" />
             Delete
