@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Drawer } from "@base-ui/react/drawer";
 import { authClient } from "@/lib/auth-client";
@@ -11,7 +11,30 @@ type Theme = "light" | "dark" | "system";
 export default function SettingsDrawer() {
   const { data: session } = authClient.useSession();
   const router = useRouter();
-  const [theme, setTheme] = useState<Theme>("system");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
+    const stored = localStorage.getItem("theme") as Theme | null;
+    if (stored === "light" || stored === "dark" || stored === "system") return stored;
+    return "system";
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (theme === "system") {
+      document.documentElement.classList.toggle("dark", mq.matches);
+      const handler = (e: MediaQueryListEvent) =>
+        document.documentElement.classList.toggle("dark", e.matches);
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
+    } else {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    }
+  }, [theme]);
+
+  function handleThemeChange(newTheme: Theme) {
+    localStorage.setItem("theme", newTheme);
+    setTheme(newTheme);
+  }
 
   const user = session?.user;
 
@@ -63,7 +86,7 @@ export default function SettingsDrawer() {
                   {(["light", "dark", "system"] as Theme[]).map((option) => (
                     <button
                       key={option}
-                      onClick={() => setTheme(option)}
+                      onClick={() => handleThemeChange(option)}
                       className={`px-3 py-1.5 text-[13px] font-medium rounded-md capitalize transition-all ${
                         theme === option
                           ? "bg-white dark:bg-[#424242] text-gray-900 dark:text-foreground shadow-sm"
