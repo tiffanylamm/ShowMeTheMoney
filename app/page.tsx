@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { SortConfig, Transaction, PaginatedResponse } from "@/types/transaction";
 import TransactionTable from "@/components/TransactionTable";
 import CSVImportModal from "@/components/CSVImportModal";
@@ -28,6 +28,7 @@ const Home = () => {
   const [allGroups, setAllGroups] = useState<Transaction[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allSources, setAllSources] = useState<string[]>([]);
+  const [pinnedGroup, setPinnedGroup] = useState<Transaction | null>(null);
 
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
@@ -82,11 +83,12 @@ const Home = () => {
     setAllSources(data.sources);
   }, [session?.user?.id]);
 
-  // Debounce search — reset to page 1 on new query
+  // Debounce search — reset to page 1 on new query; clear any pinned group
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
       setCurrentPage(1);
+      setPinnedGroup(null);
     }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -177,6 +179,7 @@ const Home = () => {
       }
       return next;
     });
+    setPinnedGroup((prev) => (prev?.id === id ? { ...prev, ...updates } : prev));
 
     fetch(`/api/transactions/${id}`, {
       method: "PUT",
@@ -196,6 +199,7 @@ const Home = () => {
       if (allGroups.some((g) => g.id === id)) {
         setAllGroups((prev) => prev.filter((g) => g.id !== id));
       }
+      if (pinnedGroup?.id === id) setPinnedGroup(null);
       const isLastOnPage = pageRows.length === 1 && currentPage > 1;
       const nextPage = isLastOnPage ? currentPage - 1 : currentPage;
       setChildRows((prev) => {
@@ -236,8 +240,14 @@ const Home = () => {
     }
   };
 
+  const displayRows = useMemo(() => {
+    if (!pinnedGroup || pageRows.some((r) => r.id === pinnedGroup.id))
+      return pageRows;
+    return [pinnedGroup, ...pageRows];
+  }, [pinnedGroup, pageRows]);
+
   const allTransactions = [
-    ...pageRows,
+    ...displayRows,
     ...Object.values(childRows).flat(),
   ];
 
@@ -287,6 +297,7 @@ const Home = () => {
       sortDir: sortConfig?.direction ?? null,
     });
     setAllGroups((prev) => [createdGroup, ...prev]);
+    if (debouncedSearch) setPinnedGroup(createdGroup);
 
     return actualGroupId;
   };
@@ -487,7 +498,7 @@ const Home = () => {
           className={`mt-4 transition-opacity ${isLoading ? "opacity-60 pointer-events-none" : ""}`}
         >
           <TransactionTable
-            transactions={pageRows}
+            transactions={displayRows}
             allTransactions={allTransactions}
             sortConfig={sortConfig}
             onSort={handleSort}
