@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function SignInPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,15 +20,15 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      await authClient.signIn.email(
+      await authClient.signUp.email(
         {
+          name,
           email,
           password,
-          rememberMe: false,
         },
         {
           onError: (ctx) => {
-            setError(ctx.error.message);
+            setError(ctx.error.message ?? "Sign up failed");
           },
           onSuccess: () => {
             router.replace("/");
@@ -46,7 +47,7 @@ export default function SignInPage() {
       <div className="w-full max-w-xs flex flex-col justify-center items-center">
         {/* Header */}
         <h1 className="pb-5 text-2xl font-semibold text-gray-900 dark:text-foreground">
-          Login to your account
+          Create your account
         </h1>
         {/* Connect With */}
         <div className="w-full flex flex-col justify-center text-center">
@@ -62,7 +63,7 @@ export default function SignInPage() {
                 callbackURL: "/",
               })
             }
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-1 text-[11px] font-medium text-gray-900 dark:text-foreground border border-gray-400 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-1 text-[11px] font-medium text-gray-900 dark:text-foreground border border-gray-400 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors shadow-sm"
           >
             <GoogleIcon />
             Google
@@ -77,6 +78,20 @@ export default function SignInPage() {
             <div className="h-px w-full bg-gray-600 dark:bg-gray-400"></div>{" "}
             <p className="text-nowrap">Or continue with Email</p>
             <div className="h-px w-full bg-gray-600 dark:bg-gray-400"></div>{" "}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] text-gray-900 dark:text-foreground font-medium">
+              Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="John Doe"
+              className="w-full px-3 py-1 text-[11px] text-gray-900 dark:text-foreground bg-transparent dark:bg-neutral-900 border border-gray-400 dark:border-gray-500 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-900 dark:focus:border-foreground transition-colors"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -130,10 +145,22 @@ export default function SignInPage() {
             {loading ? "Please wait…" : "Continue"}
           </button>
 
+          <p className="text-[10px]">
+            By creating an account you agree to the{" "}
+            <a href="" className="underline">
+              Terms of Service
+            </a>{" "}
+            and our{" "}
+            <a href="" className="underline">
+              Privacy Policy
+            </a>
+            .
+          </p>
+
           <p className="text-[14px]">
-            New to ShowMeTheMoney? {""}
-            <a href="/sign-up" className="text-blue-400">
-              Sign up
+            Already have an account?{" "}
+            <a href="/sign-in" className="text-blue-400">
+              Login
             </a>
           </p>
         </form>
