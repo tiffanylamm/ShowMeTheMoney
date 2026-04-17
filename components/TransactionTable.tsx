@@ -59,6 +59,7 @@ interface TransactionTableProps {
     col: "description" | "dateFrom" | "dateTo" | "amountMin" | "amountMax",
     value: string,
   ) => void;
+  totalAmount: number;
 }
 
 const localToday = () => {
@@ -105,6 +106,7 @@ const TransactionTable = ({
   onFilterChange,
   textFilters,
   onTextFilterChange,
+  totalAmount,
 }: TransactionTableProps) => {
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: localToday(),
@@ -569,6 +571,16 @@ const TransactionTable = ({
         className="overflow-x-auto overflow-y-auto flex-1 min-h-0"
       >
         <table className="w-full text-left border-collapse">
+          <colgroup>
+            <col className="w-8" />
+            <col className="w-32" />
+            <col />
+            <col className="w-40" />
+            <col className="w-32" />
+            <col className="w-32" />
+            <col className="w-40" />
+            <col className="w-16" />
+          </colgroup>
           {/* Header */}
           <thead className="sticky top-0 bg-white dark:bg-[#131314] z-2">
             <tr>
@@ -734,6 +746,28 @@ const TransactionTable = ({
             </tr>
           </thead>
           <tbody>
+            {/* Totals Row */}
+            <tr className="border-b border-gray-100 dark:border-gray-800">
+              <td colSpan={4} />
+              <td className="h-9 px-4 text-[13px] font-medium whitespace-nowrap text-right">
+                {(() => {
+                  const isPositive = totalAmount >= 0;
+                  const formatted = new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    minimumFractionDigits: 2,
+                  }).format(Math.abs(totalAmount));
+                  return (
+                    <span className={isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                      {isPositive ? "+" : "-"}{formatted}
+                    </span>
+                  );
+                })()}
+              </td>
+              <td />
+              <td />
+              <td />
+            </tr>
             {/* Add Transaction Row */}
             {showAddRow && (
               <tr className="bg-gray-50/50 dark:bg-[#1b1b1b]/50 border-b border-gray-200 dark:border-gray-700">

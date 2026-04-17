@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
-import { eq, desc, asc, and, isNull, ilike, or, count, inArray, gte, lte, SQL } from "drizzle-orm";
+import { eq, desc, asc, and, isNull, ilike, or, count, sum, inArray, gte, lte, SQL } from "drizzle-orm";
 import { STATUSES, UPDATABLE_FIELDS } from "@/types/transaction";
 
 const SORTABLE_COLUMNS = {
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
     orderByClause = desc(transactions.createdAt);
   }
 
-  const [data, countResult] = await Promise.all([
+  const [data, countResult, sumResult] = await Promise.all([
     db
       .select()
       .from(transactions)
@@ -135,9 +135,11 @@ export async function GET(request: Request) {
       .limit(limit)
       .offset(offset),
     db.select({ total: count() }).from(transactions).where(whereClause),
+    db.select({ totalAmount: sum(transactions.amount) }).from(transactions).where(whereClause),
   ]);
 
   const total = Number(countResult[0].total);
+  const totalAmount = Number(sumResult[0].totalAmount ?? 0);
 
   // Fetch child counts for any group rows on this page
   const groupIds = data.filter((tx) => tx.isGroup).map((tx) => tx.id);
@@ -160,6 +162,7 @@ export async function GET(request: Request) {
   return Response.json({
     data: dataWithCounts,
     total,
+    totalAmount,
     page,
     totalPages: Math.ceil(total / limit),
     limit,

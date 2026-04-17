@@ -22,6 +22,7 @@ const Home = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalAmount, setTotalAmount] = useState(0);
   const [textFilters, setTextFilters] = useState<TextFilters>(EMPTY_TEXT_FILTERS);
   const [debouncedTextFilters, setDebouncedTextFilters] = useState<TextFilters>(EMPTY_TEXT_FILTERS);
   const textFiltersRef = useRef<TextFilters>(EMPTY_TEXT_FILTERS);
@@ -85,6 +86,7 @@ const Home = () => {
         const json: PaginatedResponse = await res.json();
         setPageRows(json.data);
         setTotal(json.total);
+        setTotalAmount(json.totalAmount);
         setTotalPages(json.totalPages);
         setCurrentPage(json.page);
       } finally {
@@ -201,6 +203,17 @@ const Home = () => {
     id: string,
     updates: Partial<Transaction>,
   ) => {
+    if (updates.amount !== undefined) {
+      const existing =
+        pageRows.find((tx) => tx.id === id) ??
+        (pinnedRow?.id === id ? pinnedRow : null) ??
+        Object.values(childRows).flat().find((tx) => tx.id === id) ??
+        null;
+      if (existing) {
+        setTotalAmount((prev) => prev + (updates.amount! - existing.amount));
+      }
+    }
+
     setPageRows((prev) =>
       prev.map((tx) => (tx.id === id ? { ...tx, ...updates } : tx)),
     );
@@ -556,6 +569,7 @@ const Home = () => {
             onFilterChange={handleFilterChange}
             textFilters={textFilters}
             onTextFilterChange={handleTextFilterChange}
+            totalAmount={totalAmount}
           />
         </div>
         <div className="shrink-0">
