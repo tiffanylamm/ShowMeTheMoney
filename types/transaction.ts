@@ -30,6 +30,7 @@ export interface SortConfig {
 export interface PaginatedResponse {
     data: Transaction[];
     total: number;
+    totalAmount: number;
     page: number;
     totalPages: number;
     limit: number;
