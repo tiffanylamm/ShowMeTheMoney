@@ -66,7 +66,7 @@ function getCorsHeaders(origin: string | null) {
 }
 
 // --- Public routes (no auth required) ---
-const publicPaths = ["/sign-in", "/api/auth"];
+const publicPaths = ["/sign-in", "/sign-up", "/api/auth"];
 
 function isPublicPath(pathname: string): boolean {
   return publicPaths.some(
