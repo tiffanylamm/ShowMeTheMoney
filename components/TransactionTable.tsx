@@ -60,6 +60,7 @@ interface TransactionTableProps {
     value: string,
   ) => void;
   totalAmount: number;
+  showTotalsRow: boolean;
 }
 
 const localToday = () => {
@@ -107,6 +108,7 @@ const TransactionTable = ({
   textFilters,
   onTextFilterChange,
   totalAmount,
+  showTotalsRow,
 }: TransactionTableProps) => {
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: localToday(),
@@ -747,7 +749,7 @@ const TransactionTable = ({
           </thead>
           <tbody>
             {/* Totals Row */}
-            <tr className="border-b border-gray-100 dark:border-gray-800">
+            {showTotalsRow && <tr className="border-b border-gray-100 dark:border-gray-800">
               <td colSpan={4} />
               <td className="h-9 px-4 text-[13px] font-medium whitespace-nowrap text-right">
                 {(() => {
@@ -767,7 +769,7 @@ const TransactionTable = ({
               <td />
               <td />
               <td />
-            </tr>
+            </tr>}
             {/* Add Transaction Row */}
             {showAddRow && (
               <tr className="bg-gray-50/50 dark:bg-[#1b1b1b]/50 border-b border-gray-200 dark:border-gray-700">

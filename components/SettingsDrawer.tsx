@@ -8,7 +8,12 @@ import { Settings } from "lucide-react";
 
 type Theme = "light" | "dark" | "system";
 
-export default function SettingsDrawer() {
+interface SettingsDrawerProps {
+  showTotalsRow: boolean;
+  onToggleTotalsRow: (val: boolean) => void;
+}
+
+export default function SettingsDrawer({ showTotalsRow, onToggleTotalsRow }: SettingsDrawerProps) {
   const { data: session } = authClient.useSession();
   const router = useRouter();
   const [theme, setTheme] = useState<Theme>(() => {
@@ -67,12 +72,20 @@ export default function SettingsDrawer() {
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">Name</span>
-                    <span className="text-[13px] text-gray-900 dark:text-foreground">{user?.name ?? "—"}</span>
+                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                      Name
+                    </span>
+                    <span className="text-[13px] text-gray-900 dark:text-foreground">
+                      {user?.name ?? "—"}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">Email</span>
-                    <span className="text-[13px] text-gray-900 dark:text-foreground">{user?.email ?? "—"}</span>
+                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                      Email
+                    </span>
+                    <span className="text-[13px] text-gray-900 dark:text-foreground">
+                      {user?.email ?? "—"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -82,20 +95,44 @@ export default function SettingsDrawer() {
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
                   Appearance
                 </p>
-                <div className="inline-flex bg-gray-100 dark:bg-[#1b1b1b] rounded-lg p-0.5 gap-0.5">
-                  {(["light", "dark", "system"] as Theme[]).map((option) => (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                      Show Total Amount
+                    </span>
                     <button
-                      key={option}
-                      onClick={() => handleThemeChange(option)}
-                      className={`px-3 py-1.5 text-[13px] font-medium rounded-md capitalize transition-all ${
-                        theme === option
-                          ? "bg-white dark:bg-[#424242] text-gray-900 dark:text-foreground shadow-sm"
-                          : "text-gray-600 dark:text-gray-400"
-                      }`}
+                      role="switch"
+                      aria-checked={showTotalsRow}
+                      onClick={() => onToggleTotalsRow(!showTotalsRow)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${showTotalsRow ? "bg-gray-900 dark:bg-gray-100" : "bg-gray-200 dark:bg-gray-700"}`}
                     >
-                      {option}
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white dark:bg-gray-900 shadow-sm transition-transform mt-0.5 ${showTotalsRow ? "translate-x-4.5" : "translate-x-0.5"}`}
+                      />
                     </button>
-                  ))}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                      Display
+                    </span>
+                    <div className="inline-flex bg-gray-100 dark:bg-neutral-800 rounded-lg p-0.5 gap-0.5">
+                      {(["light", "dark", "system"] as Theme[]).map(
+                        (option) => (
+                          <button
+                            key={option}
+                            onClick={() => handleThemeChange(option)}
+                            className={`px-3 py-1.5 text-[13px] font-medium rounded-md capitalize transition-all ${
+                              theme === option
+                                ? "bg-white dark:bg-[#424242] text-gray-900 dark:text-foreground shadow-sm"
+                                : "text-gray-600 dark:text-gray-400"
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 

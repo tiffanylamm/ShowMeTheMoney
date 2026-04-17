@@ -23,6 +23,11 @@ const Home = () => {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [showTotalsRow, setShowTotalsRow] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("showTotalsRow");
+    return stored === null ? true : stored === "true";
+  });
   const [textFilters, setTextFilters] = useState<TextFilters>(EMPTY_TEXT_FILTERS);
   const [debouncedTextFilters, setDebouncedTextFilters] = useState<TextFilters>(EMPTY_TEXT_FILTERS);
   const textFiltersRef = useRef<TextFilters>(EMPTY_TEXT_FILTERS);
@@ -520,7 +525,7 @@ const Home = () => {
               New
             </button>
 
-            <SettingsDrawer />
+            <SettingsDrawer showTotalsRow={showTotalsRow} onToggleTotalsRow={(val) => { localStorage.setItem("showTotalsRow", String(val)); setShowTotalsRow(val); }} />
           </div>
         </header>
 
@@ -570,6 +575,7 @@ const Home = () => {
             textFilters={textFilters}
             onTextFilterChange={handleTextFilterChange}
             totalAmount={totalAmount}
+            showTotalsRow={showTotalsRow}
           />
         </div>
         <div className="shrink-0">
