@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Drawer } from "@base-ui/react/drawer";
 import { authClient } from "@/lib/auth-client";
-import { Settings } from "lucide-react";
+import { Settings, HardDrive, Check, Loader } from "lucide-react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -42,6 +42,23 @@ export default function SettingsDrawer({ showTotalsRow, onToggleTotalsRow }: Set
   }
 
   const user = session?.user;
+
+  const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
+  const [driveConnecting, setDriveConnecting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/drive/token")
+      .then((r) => setDriveConnected(r.ok))
+      .catch(() => setDriveConnected(false));
+  }, []);
+
+  async function handleConnectDrive() {
+    setDriveConnecting(true);
+    await authClient.signIn.social({
+      provider: "google",
+      callbackURL: window.location.href,
+    });
+  }
 
   function handleLogout() {
     authClient.signOut({
@@ -133,6 +150,37 @@ export default function SettingsDrawer({ showTotalsRow, onToggleTotalsRow }: Set
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Integrations section */}
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-6 mb-6">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+                  Integrations
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                      Google Drive
+                    </span>
+                  </div>
+                  {driveConnected === null ? (
+                    <Loader className="w-3.5 h-3.5 text-gray-400 animate-spin" />
+                  ) : driveConnected ? (
+                    <span className="flex items-center gap-1 text-[12px] text-emerald-600 dark:text-emerald-400">
+                      <Check className="w-3.5 h-3.5" />
+                      Connected
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleConnectDrive}
+                      disabled={driveConnecting}
+                      className="text-[12px] font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
+                    >
+                      {driveConnecting ? "Connecting…" : "Connect"}
+                    </button>
+                  )}
                 </div>
               </div>
 
