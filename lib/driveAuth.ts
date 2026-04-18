@@ -1,27 +1,26 @@
 import { db } from "@/lib/db";
-import { account } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { driveTokens } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
- * Returns a valid Google access token for the given user, refreshing it if expired.
- * Returns null if the user has no Google account or no refresh token available.
+ * Returns a valid Google Drive access token for the given user, refreshing it if expired.
+ * Returns null if the user has not connected Google Drive.
  */
 export async function getValidDriveToken(userId: string): Promise<string | null> {
-  const [googleAccount] = await db
+  const [record] = await db
     .select()
-    .from(account)
-    .where(and(eq(account.userId, userId), eq(account.providerId, "google")));
+    .from(driveTokens)
+    .where(eq(driveTokens.userId, userId));
 
-  if (!googleAccount?.accessToken) return null;
-  if (!googleAccount.scope?.includes("drive.file")) return null;
+  if (!record?.accessToken) return null;
 
-  const isExpired = googleAccount.accessTokenExpiresAt
-    ? googleAccount.accessTokenExpiresAt < new Date()
+  const isExpired = record.accessTokenExpiresAt
+    ? record.accessTokenExpiresAt < new Date()
     : false;
 
-  if (!isExpired) return googleAccount.accessToken;
+  if (!isExpired) return record.accessToken;
 
-  if (!googleAccount.refreshToken) return null;
+  if (!record.refreshToken) return null;
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -29,7 +28,7 @@ export async function getValidDriveToken(userId: string): Promise<string | null>
     body: new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID!,
       client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      refresh_token: googleAccount.refreshToken,
+      refresh_token: record.refreshToken,
       grant_type: "refresh_token",
     }),
   });
@@ -39,12 +38,12 @@ export async function getValidDriveToken(userId: string): Promise<string | null>
   const data = await res.json();
 
   await db
-    .update(account)
+    .update(driveTokens)
     .set({
       accessToken: data.access_token,
       accessTokenExpiresAt: new Date(Date.now() + data.expires_in * 1000),
     })
-    .where(eq(account.id, googleAccount.id));
+    .where(eq(driveTokens.userId, userId));
 
   return data.access_token;
 }
