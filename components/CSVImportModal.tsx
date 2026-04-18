@@ -186,6 +186,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
           source: null,
           isGroup: false,
           parentId: null,
+          driveFileId: null,
         }));
       onImport(newTransactions);
       onClose();
@@ -233,6 +234,7 @@ const CSVImportModal = ({ isOpen, onClose, onImport }: CSVImportModalProps) => {
         source: null,
         isGroup: false,
         parentId: null,
+        driveFileId: null,
       };
     });
     onImport(newTransactions);

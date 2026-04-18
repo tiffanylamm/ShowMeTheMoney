@@ -179,27 +179,24 @@ const Home = () => {
     newTransaction: Omit<Transaction, "id" | "createdAt">,
   ) => {
     const now = Date.now();
-    const transaction: Transaction = {
-      ...newTransaction,
-      id: crypto.randomUUID(),
-      createdAt: now,
-    };
 
     fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(transaction),
-    }).then(() => {
-      addMetadata(newTransaction);
-      setPinnedRow(transaction);
-      setCurrentPage(1);
-      // If already on page 1, currentPage state won't change so trigger manually
-      fetchPage({
-        page: 1,
-        sortBy: sortConfig?.key ?? null,
-        sortDir: sortConfig?.direction ?? null,
+      body: JSON.stringify({ ...newTransaction, createdAt: now }),
+    })
+      .then((res) => res.json())
+      .then((created: Transaction) => {
+        addMetadata(newTransaction);
+        setPinnedRow(created);
+        setCurrentPage(1);
+        // If already on page 1, currentPage state won't change so trigger manually
+        fetchPage({
+          page: 1,
+          sortBy: sortConfig?.key ?? null,
+          sortDir: sortConfig?.direction ?? null,
+        });
       });
-    });
 
     setShowAddRow(false);
   };

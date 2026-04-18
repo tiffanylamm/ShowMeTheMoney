@@ -90,6 +90,7 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   transactions: many(transactions),
+  driveTokens: many(driveTokens),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -152,6 +153,30 @@ export const transactionRelations = relations(transactions, ({ one, many }) => (
   }),
   children: many(transactions, {
     relationName: "parent_child",
+  }),
+}));
+
+export const driveTokens = pgTable("drive_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  scope: text("scope"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const driveTokenRelations = relations(driveTokens, ({ one }) => ({
+  user: one(user, {
+    fields: [driveTokens.userId],
+    references: [user.id],
   }),
 }));
 

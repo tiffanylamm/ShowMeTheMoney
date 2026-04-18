@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Drawer } from "@base-ui/react/drawer";
 import { authClient } from "@/lib/auth-client";
-import { Settings } from "lucide-react";
+import { Settings, HardDrive, Loader } from "lucide-react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -43,6 +43,33 @@ export default function SettingsDrawer({ showTotalsRow, onToggleTotalsRow }: Set
 
   const user = session?.user;
 
+  const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
+  const [driveConnecting, setDriveConnecting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/drive/token")
+      .then((r) => setDriveConnected(r.ok))
+      .catch(() => setDriveConnected(false));
+  }, []);
+
+  function handleConnectDrive() {
+    setDriveConnecting(true);
+    window.location.href = "/api/drive/connect";
+  }
+
+  async function handleDeleteAccount() {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeleting(true);
+    await fetch("/api/user", { method: "DELETE" });
+    await authClient.signOut();
+    router.push("/sign-in");
+  }
+
   function handleLogout() {
     authClient.signOut({
       fetchOptions: {
@@ -70,7 +97,7 @@ export default function SettingsDrawer({ showTotalsRow, onToggleTotalsRow }: Set
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
                   Account
                 </p>
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
                       Name
@@ -86,6 +113,38 @@ export default function SettingsDrawer({ showTotalsRow, onToggleTotalsRow }: Set
                     <span className="text-[13px] text-gray-900 dark:text-foreground">
                       {user?.email ?? "—"}
                     </span>
+                  </div>
+                  <div className="pt-1 self-end">
+                    {confirmDelete ? (
+                      <div className="rounded-md border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950 p-3 space-y-2">
+                        <p className="text-[12px] text-rose-700 dark:text-rose-300">
+                          This will permanently delete your account and all your
+                          data. This cannot be undone.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleDeleteAccount}
+                            disabled={deleting}
+                            className="flex h-7 items-center justify-center rounded bg-rose-600 dark:bg-rose-700 px-3 text-[12px] font-medium text-white hover:bg-rose-700 dark:hover:bg-rose-600 disabled:opacity-50"
+                          >
+                            {deleting ? "Deleting…" : "Yes, delete my account"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(false)}
+                            className="text-[12px] text-gray-500 dark:text-gray-400 hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelete(true)}
+                        className="hover:text-rose-600 dark:hover:text-rose-400 px-3 py-1.5 text-[13px] font-medium rounded-md capitalize transition-all bg-white dark:bg-[#424242] text-gray-900 dark:text-foreground shadow-sm"
+                      >
+                        Delete account
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -133,6 +192,36 @@ export default function SettingsDrawer({ showTotalsRow, onToggleTotalsRow }: Set
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Integrations section */}
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-6 mb-6">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+                  Integrations
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                      Google Drive
+                    </span>
+                  </div>
+                  {driveConnected === null ? (
+                    <Loader className="w-3.5 h-3.5 text-gray-400 animate-spin" />
+                  ) : driveConnected ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-medium tracking-wide bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                      Connected
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleConnectDrive}
+                      disabled={driveConnecting}
+                      className="inline-flex items-center text-[12px] font-medium text-gray-900 dark:text-foreground px-2 py-0.5 rounded border border-transparent hover:border-gray-900 dark:hover:border-foreground disabled:opacity-50"
+                    >
+                      {driveConnecting ? "Connecting…" : "Connect"}
+                    </button>
+                  )}
                 </div>
               </div>
 

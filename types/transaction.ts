@@ -2,7 +2,7 @@ export type Status = "Completed" | "Refunding" | "Owed";
 
 export const STATUSES: Status[] = ["Completed", "Owed", "Refunding"];
 
-export const UPDATABLE_FIELDS = ["date", "description", "category", "amount", "status", "source", "parentId"] as const;
+export const UPDATABLE_FIELDS = ["date", "description", "category", "amount", "status", "source", "parentId", "driveFileId"] as const;
 
 export type Category = string
 
@@ -19,6 +19,7 @@ export interface Transaction {
     createdAt: number //timestamp since never displayed
     isGroup: boolean
     parentId: string | null
+    driveFileId: string | null
     childCount?: number
 }
 

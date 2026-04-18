@@ -6,8 +6,10 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  FileText,
   Layers,
   ListFilter,
+  Paperclip,
   Trash,
   Unlink,
   X,
@@ -17,6 +19,77 @@ import StatusBadge from "./StatusBadge";
 import InputAutocomplete from "./InputAutocomplete";
 import BulkActions from "./BulkActions";
 import { computeGroupFields } from "@/lib/groupUtils";
+
+function DriveFileCell({
+  fileId,
+  onUnlink,
+}: {
+  fileId: string;
+  onUnlink: () => void;
+}) {
+  const [file, setFile] = useState<{
+    name: string;
+    webViewLink: string;
+  } | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/drive/file/${fileId}`)
+      .then((r) => {
+        if (!r.ok) {
+          setError(true);
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (data?.name)
+          setFile({ name: data.name, webViewLink: data.webViewLink });
+        else if (data) setError(true);
+      })
+      .catch(() => setError(true));
+  }, [fileId]);
+
+  if (error) {
+    return (
+      <span title="Could not load file">
+        <FileText className="w-3.5 h-3.5 text-red-800" />
+      </span>
+    );
+  }
+
+  if (!file) {
+    return (
+      <FileText className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 animate-pulse" />
+    );
+  }
+  return (
+    <div className="flex relative">
+      <a
+        href={file.webViewLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={file.name}
+        onClick={(e) => e.stopPropagation()}
+        className="p-0.5"
+      >
+        <FileText className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors" />
+      </a>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onUnlink();
+        }}
+        className="absolute -top-1.5 -right-2.5 w-3 h-3 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-rose-100 dark:hover:bg-rose-900 hover:text-rose-600 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+        aria-label="Remove file"
+        title="Remove file"
+      >
+        <X className="w-2 h-2" />
+      </button>
+    </div>
+  );
+}
+
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -119,7 +192,59 @@ const TransactionTable = ({
     source: null,
     isGroup: false,
     parentId: null,
+    driveFileId: null,
   });
+
+  const attachingTxIdRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
+  const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/drive/token").then((r) => setDriveConnected(r.ok));
+  }, []);
+
+  const handleAttach = (txId: string) => {
+    if (!driveConnected) {
+      alert("Google Drive is not connected. Go to Settings → Integrations → Connect.");
+      return;
+    }
+    attachingTxIdRef.current = txId;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const txId = attachingTxIdRef.current;
+    e.target.value = "";
+    if (!file || !txId) return;
+
+    setUploadingIds((prev) => new Set([...prev, txId]));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/drive/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error ?? "Upload failed");
+        return;
+      }
+      const { id } = await res.json();
+      onUpdate(txId, { driveFileId: id });
+    } catch {
+      alert("Upload failed");
+    } finally {
+      setUploadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(txId);
+        return next;
+      });
+      attachingTxIdRef.current = null;
+    }
+  };
   const pendingFocusIdRef = useRef<string | null>(null);
   const [editingCell, setEditingCell] = useState<{
     id: string;
@@ -363,7 +488,6 @@ const TransactionTable = ({
     );
   };
 
-
   const selectableIds = useMemo(
     () => transactions.filter((tx) => !tx.isGroup).map((tx) => tx.id),
     [transactions],
@@ -473,6 +597,7 @@ const TransactionTable = ({
       source: newTransaction.source ?? null,
       isGroup: false,
       parentId: null,
+      driveFileId: null,
     });
     setNewTransaction({
       date: localToday(),
@@ -483,6 +608,7 @@ const TransactionTable = ({
       source: null,
       isGroup: false,
       parentId: null,
+      driveFileId: null,
     });
   };
 
@@ -581,6 +707,7 @@ const TransactionTable = ({
             <col className="w-32" />
             <col className="w-32" />
             <col className="w-40" />
+            <col className="w-32" />
             <col className="w-16" />
           </colgroup>
           {/* Header */}
@@ -744,32 +871,43 @@ const TransactionTable = ({
                 {openFilterCol === "source" &&
                   renderFilterDropdown("source", allSources, true)}
               </th>
+              <th className={`${thClass} w-32`}>File</th>
               <th className={`${thClass} w-16`} />
             </tr>
           </thead>
           <tbody>
             {/* Totals Row */}
-            {showTotalsRow && <tr className="border-b border-gray-100 dark:border-gray-800">
-              <td colSpan={4} />
-              <td className="h-9 px-4 text-[13px] font-medium whitespace-nowrap text-right">
-                {(() => {
-                  const isPositive = totalAmount >= 0;
-                  const formatted = new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                    minimumFractionDigits: 2,
-                  }).format(Math.abs(totalAmount));
-                  return (
-                    <span className={isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
-                      {isPositive ? "+" : "-"}{formatted}
-                    </span>
-                  );
-                })()}
-              </td>
-              <td />
-              <td />
-              <td />
-            </tr>}
+            {showTotalsRow && (
+              <tr className="border-b border-gray-100 dark:border-gray-800">
+                <td colSpan={4} />
+                <td className="h-9 px-4 text-[13px] font-medium whitespace-nowrap text-right">
+                  {(() => {
+                    const isPositive = totalAmount >= 0;
+                    const formatted = new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                      minimumFractionDigits: 2,
+                    }).format(Math.abs(totalAmount));
+                    return (
+                      <span
+                        className={
+                          isPositive
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                        }
+                      >
+                        {isPositive ? "+" : "-"}
+                        {formatted}
+                      </span>
+                    );
+                  })()}
+                </td>
+                <td />
+                <td />
+                <td />
+                <td />
+              </tr>
+            )}
             {/* Add Transaction Row */}
             {showAddRow && (
               <tr className="bg-gray-50/50 dark:bg-[#1b1b1b]/50 border-b border-gray-200 dark:border-gray-700">
@@ -869,6 +1007,8 @@ const TransactionTable = ({
                     positionerZIndex={50}
                   />
                 </td>
+                {/* File — not available on new row */}
+                <td className="h-9 px-3" />
                 {/* Extra */}
                 <td className="py-1.5 px-3 text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -898,7 +1038,7 @@ const TransactionTable = ({
             {transactions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="py-8 text-center text-[13px] text-gray-400 dark:text-gray-500"
                 >
                   No transactions found.
@@ -1010,7 +1150,9 @@ const TransactionTable = ({
                           />
                         ) : (
                           <span className="flex items-center gap-1.5 py-px min-w-0">
-                            <span className="uppercase truncate">{tx.description}</span>
+                            <span className="uppercase truncate">
+                              {tx.description}
+                            </span>
                             {tx.isGroup && tx.childCount !== undefined && (
                               <span className="text-gray-400 dark:text-gray-500 text-[11px] font-normal">
                                 · {tx.childCount}{" "}
@@ -1158,6 +1300,30 @@ const TransactionTable = ({
                             {display.source ?? ""}
                           </span>
                         )}
+                      </td>
+
+                      {/* File */}
+                      <td className={`${tdClass} flex items-center`}>
+                        {!tx.isGroup &&
+                          (uploadingIds.has(tx.id) ? (
+                            <FileText className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 animate-pulse" />
+                          ) : tx.driveFileId ? (
+                            <DriveFileCell
+                              fileId={tx.driveFileId}
+                              onUnlink={() =>
+                                onUpdate(tx.id, { driveFileId: null })
+                              }
+                            />
+                          ) : (
+                            <button
+                              onClick={() => handleAttach(tx.id)}
+                              className="p-0.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                              aria-label="Upload file to Drive"
+                              title="Upload file to Google Drive"
+                            >
+                              <Paperclip className="w-3.5 h-3.5" />
+                            </button>
+                          ))}
                       </td>
 
                       {/* Controls */}
@@ -1421,6 +1587,29 @@ const TransactionTable = ({
                             )}
                           </td>
 
+                          {/* File */}
+                          <td className={`${tdClass} flex items-center`}>
+                            {uploadingIds.has(child.id) ? (
+                              <FileText className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 animate-pulse" />
+                            ) : child.driveFileId ? (
+                              <DriveFileCell
+                                fileId={child.driveFileId}
+                                onUnlink={() =>
+                                  onUpdate(child.id, { driveFileId: null })
+                                }
+                              />
+                            ) : (
+                              <button
+                                onClick={() => handleAttach(child.id)}
+                                className="p-0.5 text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                                aria-label="Upload file to Drive"
+                                title="Upload file to Google Drive"
+                              >
+                                <Paperclip className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </td>
+
                           {/* Unlink from group */}
                           <td className={`${tdClass} text-right`}>
                             <button
@@ -1441,6 +1630,12 @@ const TransactionTable = ({
           </tbody>
         </table>
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
     </div>
   );
 };

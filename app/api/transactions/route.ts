@@ -190,6 +190,7 @@ function toInsertValues(tx: Record<string, unknown>, userId: string) {
     createdAt: typeof tx.createdAt === "number" ? tx.createdAt : Date.now(),
     isGroup: (tx.isGroup as boolean) ?? false,
     parentId: (tx.parentId as string) ?? null,
+    driveFileId: (tx.driveFileId as string) ?? null,
     userId,
   };
 }
