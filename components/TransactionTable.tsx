@@ -133,6 +133,9 @@ interface TransactionTableProps {
   totalAmount: number;
   showTotalsRow: boolean;
   scrollToTopRef?: React.RefObject<(() => void) | null>;
+  groupFilters: Record<string, string[]>;
+  onGroupFilterChange: (groupId: string, categories: string[]) => void;
+  showGroupFilters: boolean;
 }
 
 const localToday = () => {
@@ -196,6 +199,9 @@ const TransactionTable = ({
   totalAmount,
   showTotalsRow,
   scrollToTopRef,
+  groupFilters,
+  onGroupFilterChange,
+  showGroupFilters,
 }: TransactionTableProps) => {
   const emptyNewTransaction: Partial<Transaction> = {
     date: localToday(),
@@ -220,6 +226,9 @@ const TransactionTable = ({
   }, [showAddRow]);
 
   const newDescriptionRef = useRef<HTMLInputElement>(null);
+  const [groupDescSearch, setGroupDescSearch] = useState<Record<string, string>>({});
+  const lastClickedIdRef = useRef<string | null>(null);
+  const shiftKeyRef = useRef(false);
 
   const attachingTxIdRef = useRef<{
     id: string;
@@ -1083,6 +1092,22 @@ const TransactionTable = ({
                   : [];
                 const isSelected = selectedIds.has(tx.id) && !tx.isGroup;
 
+                // Group filter state — computed here so parent row can use it
+                const activeFilters = tx.isGroup && isExpanded && showGroupFilters ? (groupFilters[tx.id] ?? []) : [];
+                const descSearch = tx.isGroup && isExpanded && showGroupFilters ? (groupDescSearch[tx.id] ?? "") : "";
+                const uniqueCategories = tx.isGroup && isExpanded
+                  ? [...new Set(children.map((c) => c.category ?? ""))].sort()
+                  : [];
+                const filteredChildren = tx.isGroup && isExpanded
+                  ? children.filter((c) => {
+                      const matchesCategory = activeFilters.length === 0 || activeFilters.includes(c.category ?? "");
+                      const matchesDesc = !descSearch || c.description.toLowerCase().includes(descSearch.toLowerCase());
+                      return matchesCategory && matchesDesc;
+                    })
+                  : children;
+                const filteredTotal = filteredChildren.reduce((sum, c) => sum + Number(c.amount), 0);
+                const isFiltered = activeFilters.length > 0 || !!descSearch;
+
                 return (
                   <React.Fragment key={tx.id}>
                     {/* Parent / regular row */}
@@ -1110,11 +1135,27 @@ const TransactionTable = ({
                             )}
                           </button>
                         ) : (
-                          <label className="flex items-center justify-center w-full h-full min-h-8 cursor-pointer">
+                          <label
+                            className="flex items-center justify-center w-full h-full min-h-8 cursor-pointer select-none"
+                            onMouseDown={(e) => { shiftKeyRef.current = e.shiftKey; }}
+                          >
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => onToggleSelect(tx)}
+                              onChange={() => {
+                                if (shiftKeyRef.current && lastClickedIdRef.current !== null) {
+                                  const lastIdx = transactions.findIndex(t => t.id === lastClickedIdRef.current);
+                                  const currIdx = transactions.findIndex(t => t.id === tx.id);
+                                  if (lastIdx !== -1) {
+                                    const from = Math.min(lastIdx, currIdx);
+                                    const to = Math.max(lastIdx, currIdx);
+                                    onSelectAll(transactions.slice(from, to + 1));
+                                    return;
+                                  }
+                                }
+                                onToggleSelect(tx);
+                                lastClickedIdRef.current = tx.id;
+                              }}
                               className="w-3.5 h-3.5 accent-gray-900 dark:accent-gray-300 cursor-pointer"
                             />
                           </label>
@@ -1182,7 +1223,10 @@ const TransactionTable = ({
                             </span>
                             {tx.isGroup && tx.childCount !== undefined && (
                               <span className="text-gray-400 dark:text-gray-500 text-[11px] font-normal">
-                                · {tx.childCount}{" "}
+                                ·{" "}
+                                {isFiltered && isExpanded
+                                  ? `${filteredChildren.length} of ${tx.childCount}`
+                                  : tx.childCount}{" "}
                                 {tx.childCount === 1
                                   ? "Transaction"
                                   : "Transactions"}
@@ -1249,7 +1293,9 @@ const TransactionTable = ({
                           />
                         ) : (
                           <span className="block py-px">
-                            {formatAmount(tx.amount)}
+                            {tx.isGroup && isExpanded && isFiltered
+                              ? formatAmount(filteredTotal)
+                              : formatAmount(tx.amount)}
                           </span>
                         )}
                       </td>
@@ -1363,14 +1409,99 @@ const TransactionTable = ({
                     </tr>
 
                     {/* Child rows */}
-                    {tx.isGroup &&
-                      isExpanded &&
-                      children.map((child) => (
+                    {tx.isGroup && isExpanded && (() => {
+                      return (
+                        <>
+                          {/* Filter bar */}
+                          {showGroupFilters && (
+                            <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-[#1a1a1a]">
+                              {/* chevron col — x clear */}
+                              <td className="py-1.5 w-8 align-middle text-center">
+                                {isFiltered && (
+                                  <button
+                                    onClick={() => {
+                                      onGroupFilterChange(tx.id, []);
+                                      setGroupDescSearch((prev) => ({ ...prev, [tx.id]: "" }));
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                                    aria-label="Clear filters"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </td>
+                              {/* date col — empty */}
+                              <td className="py-1.5" />
+                              {/* description col */}
+                              <td className="px-4 py-1.5">
+                                <input
+                                  type="text"
+                                  placeholder="Search..."
+                                  value={groupDescSearch[tx.id] ?? ""}
+                                  onChange={(e) =>
+                                    setGroupDescSearch((prev) => ({ ...prev, [tx.id]: e.target.value }))
+                                  }
+                                  className="h-6 w-full bg-transparent text-[12px] text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 border border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 rounded px-1.5 outline-none transition-colors"
+                                />
+                              </td>
+                              {/* category col */}
+                              <td className="px-4 py-1.5">
+                                <select
+                                  value={activeFilters.length === 0 ? "__all__" : activeFilters[0]}
+                                  onChange={(e) =>
+                                    onGroupFilterChange(tx.id, e.target.value !== "__all__" ? [e.target.value] : [])
+                                  }
+                                  className="h-6 w-full rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-[12px] text-gray-700 dark:text-gray-300 px-1.5 outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors cursor-pointer"
+                                >
+                                  <option value="__all__">All</option>
+                                  {uniqueCategories.map((cat) => (
+                                    <option key={cat} value={cat}>
+                                      {cat === "" ? "None" : cat}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              {/* remaining cols */}
+                              <td colSpan={5} />
+                            </tr>
+                          )}
+
+                          {/* Filtered child rows */}
+                          {filteredChildren.map((child) => (
                         <tr
                           key={child.id}
-                          className="group hover:bg-gray-50/70 dark:hover:bg-[#424242] transition-colors"
+                          className={`group transition-colors ${
+                            selectedIds.has(child.id)
+                              ? "bg-blue-50/60 hover:bg-gray-50 dark:bg-[#282828] dark:hover:bg-[#424242]"
+                              : "hover:bg-gray-50/70 dark:hover:bg-[#424242]"
+                          }`}
                         >
-                          <td className={`${tdClass} w-8`} />
+                          <td className={`${tdClass} w-8 align-middle`}>
+                            <label
+                              className="flex items-center justify-center w-full h-full min-h-8 cursor-pointer select-none"
+                              onMouseDown={(e) => { shiftKeyRef.current = e.shiftKey; }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(child.id)}
+                                onChange={() => {
+                                  if (shiftKeyRef.current && lastClickedIdRef.current !== null) {
+                                    const lastIdx = filteredChildren.findIndex(c => c.id === lastClickedIdRef.current);
+                                    const currIdx = filteredChildren.findIndex(c => c.id === child.id);
+                                    if (lastIdx !== -1) {
+                                      const from = Math.min(lastIdx, currIdx);
+                                      const to = Math.max(lastIdx, currIdx);
+                                      onSelectAll(filteredChildren.slice(from, to + 1));
+                                      return;
+                                    }
+                                  }
+                                  onToggleSelect(child);
+                                  lastClickedIdRef.current = child.id;
+                                }}
+                                className="w-3.5 h-3.5 accent-gray-900 dark:accent-gray-300 cursor-pointer"
+                              />
+                            </label>
+                          </td>
 
                           {/* Date indented */}
                           <td className={`${tdClass}`}>
@@ -1621,7 +1752,11 @@ const TransactionTable = ({
                             </button>
                           </td>
                         </tr>
-                      ))}
+                          ))}
+
+                        </>
+                      );
+                    })()}
                   </React.Fragment>
                 );
               })
