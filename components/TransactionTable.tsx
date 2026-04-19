@@ -211,6 +211,14 @@ const TransactionTable = ({
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>(emptyNewTransaction);
   const [showAddErrors, setShowAddErrors] = useState(false);
 
+  useEffect(() => {
+    if (!showAddRow) {
+      setNewTransaction(emptyNewTransaction);
+      setShowAddErrors(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddRow]);
+
   const newDescriptionRef = useRef<HTMLInputElement>(null);
 
   const attachingTxIdRef = useRef<{
@@ -614,8 +622,6 @@ const TransactionTable = ({
       e.preventDefault();
       handleSaveNew();
     } else if (e.key === "Escape") {
-      setShowAddErrors(false);
-      setNewTransaction(emptyNewTransaction);
       onCancelAdd();
     }
   };
@@ -792,7 +798,7 @@ const TransactionTable = ({
                 </div>
                 {openFilterCol === "date" && renderDateRangeDropdown()}
               </th>
-              <th className={`${thClass} relative min-w-50 max-w-64`}>
+              <th className={`${thClass} relative min-w-64 max-w-80`}>
                 <div className="flex items-center justify-between gap-1">
                   <span
                     className="flex items-center cursor-pointer hover:text-gray-900 dark:hover:text-foreground transition-colors"
@@ -1047,23 +1053,14 @@ const TransactionTable = ({
                 {/* File — not available on new row */}
                 <td className="h-9 px-3" />
                 {/* Extra */}
-                <td className="py-1.5 px-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={handleSaveNew}
-                      aria-label="Save Transaction"
-                      className="p-1 text-gray-400 hover:text-emerald-600 dark:text-gray-500 dark:hover:text-emerald-400 transition-colors"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => { setShowAddErrors(false); setNewTransaction(emptyNewTransaction); onCancelAdd(); }}
-                      aria-label="Cancel"
-                      className="p-1 text-gray-400 hover:text-rose-600 dark:text-gray-500 dark:hover:text-rose-400 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                <td className={tdClass}>
+                  <button
+                    onClick={handleSaveNew}
+                    aria-label="Save Transaction"
+                    className="p-1 text-gray-400 hover:text-emerald-600 dark:text-gray-500 dark:hover:text-emerald-400 transition-colors"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
                 </td>
               </tr>
             )}
@@ -1157,7 +1154,7 @@ const TransactionTable = ({
 
                       {/* Description */}
                       <td
-                        className={`h-9 px-4 text-[13px] border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-900 dark:text-foreground font-medium max-w-64`}
+                        className={`h-9 px-4 text-[13px] border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-900 dark:text-foreground font-medium max-w-80`}
                         onClick={() =>
                           !isEditing(tx.id, "description") &&
                           startEditing(
@@ -1321,10 +1318,10 @@ const TransactionTable = ({
                       </td>
 
                       {/* File */}
-                      <td className={`${tdClass} flex items-center`}>
+                      <td className={`${tdClass} align-middle`}>
                         {!tx.isGroup &&
                           (uploadingIds.has(tx.id) ? (
-                            <FileText className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 animate-pulse" />
+                            <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 animate-pulse" />
                           ) : tx.driveFileId ? (
                             <DriveFileCell
                               fileId={tx.driveFileId}
@@ -1339,7 +1336,7 @@ const TransactionTable = ({
                               aria-label="Upload file to Drive"
                               title="Upload file to Google Drive"
                             >
-                              <Paperclip className="w-3.5 h-3.5" />
+                              <Paperclip className="w-4 h-4" />
                             </button>
                           ))}
                       </td>
@@ -1419,7 +1416,7 @@ const TransactionTable = ({
 
                           {/* Description */}
                           <td
-                            className={`${tdClass} dark:text-foreground max-w-64`}
+                            className={`${tdClass} dark:text-foreground max-w-80`}
                             onClick={() =>
                               !isEditing(child.id, "description") &&
                               startEditing(
@@ -1590,7 +1587,7 @@ const TransactionTable = ({
                           </td>
 
                           {/* File */}
-                          <td className={`${tdClass} flex items-center`}>
+                          <td className={`${tdClass} align-middle`}>
                             {uploadingIds.has(child.id) ? (
                               <FileText className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 animate-pulse" />
                             ) : child.driveFileId ? (

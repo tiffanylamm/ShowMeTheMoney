@@ -9,7 +9,7 @@ import {
 import TransactionTable from "@/components/TransactionTable";
 import CSVImportModal from "@/components/CSVImportModal";
 import Pagination from "@/components/Pagination";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, X } from "lucide-react";
 import { computeGroupFields } from "@/lib/groupUtils";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -579,18 +579,18 @@ const Home = () => {
           <div className="flex items-center">
             <button
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-gray-900 hover:bg-gray-50 dark:text-foreground dark:hover:bg-[#424242] rounded transition-colors"
+              onClick={() => setShowAddRow(!showAddRow)}
+            >
+              {showAddRow ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              New
+            </button>
+            
+            <button
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-gray-900 hover:bg-gray-50 dark:text-foreground dark:hover:bg-[#424242] rounded transition-colors"
               onClick={() => setIsImportModalOpen(true)}
             >
               <Upload className="w-4 h-4" />
               Import
-            </button>
-
-            <button
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-gray-900 hover:bg-gray-50 dark:text-foreground dark:hover:bg-[#424242] rounded transition-colors"
-              onClick={() => setShowAddRow(true)}
-            >
-              <Plus className="w-4 h-4" />
-              New
             </button>
 
             <SettingsDrawer
