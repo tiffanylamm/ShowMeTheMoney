@@ -32,6 +32,9 @@ const BulkActions = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const ids = [...selectedIds.keys()];
+  const nonGroupIds = [...selectedIds.values()]
+    .filter((tx) => !tx.isGroup)
+    .map((tx) => tx.id);
 
   const categorySuggestions = allCategories;
   const sourceSuggestions = allSources;
@@ -175,7 +178,7 @@ const BulkActions = ({
                     key={s}
                     onClick={() => {
                       if (disabled) return;
-                      onBulkUpdate(ids, { status: s });
+                      onBulkUpdate(nonGroupIds, { status: s });
                       closeAll();
                     }}
                     className={actionsDropdownItemHoverItem}
@@ -208,7 +211,7 @@ const BulkActions = ({
                       key={s}
                       onClick={() => {
                         if (disabled) return;
-                        onBulkUpdate(ids, { source: s });
+                        onBulkUpdate(nonGroupIds, { source: s });
                         closeAll();
                       }}
                       className={actionsDropdownItemHoverItem}

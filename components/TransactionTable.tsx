@@ -88,7 +88,6 @@ function DriveFileCell({
   );
 }
 
-
 interface TransactionTableProps {
   transactions: Transaction[];
   allTransactions: Transaction[];
@@ -149,7 +148,10 @@ function buildReceiptName(
 ): string {
   const sanitize = (s: string) => s.replace(/[^\w]/g, "");
   const titleCase = (s: string) =>
-    s.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("");
+    s
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join("");
   const parts: string[] = [tx.date, "Receipt"];
   if (tx.category && tx.category !== "None") parts.push(sanitize(tx.category));
   if (tx.description) parts.push(sanitize(titleCase(tx.description)));
@@ -214,7 +216,8 @@ const TransactionTable = ({
     parentId: null,
     driveFileId: null,
   };
-  const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>(emptyNewTransaction);
+  const [newTransaction, setNewTransaction] =
+    useState<Partial<Transaction>>(emptyNewTransaction);
   const [showAddErrors, setShowAddErrors] = useState(false);
 
   useEffect(() => {
@@ -222,11 +225,13 @@ const TransactionTable = ({
       setNewTransaction(emptyNewTransaction);
       setShowAddErrors(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddRow]);
 
   const newDescriptionRef = useRef<HTMLInputElement>(null);
-  const [groupDescSearch, setGroupDescSearch] = useState<Record<string, string>>({});
+  const [groupDescSearch, setGroupDescSearch] = useState<
+    Record<string, string>
+  >({});
   const lastClickedIdRef = useRef<string | null>(null);
   const shiftKeyRef = useRef(false);
 
@@ -244,12 +249,21 @@ const TransactionTable = ({
     fetch("/api/drive/token").then((r) => setDriveConnected(r.ok));
   }, []);
 
-  const handleAttach = (tx: Pick<Transaction, "id" | "date" | "category" | "description">) => {
+  const handleAttach = (
+    tx: Pick<Transaction, "id" | "date" | "category" | "description">,
+  ) => {
     if (!driveConnected) {
-      alert("Google Drive is not connected. Go to Settings → Integrations → Connect.");
+      alert(
+        "Google Drive is not connected. Go to Settings → Integrations → Connect.",
+      );
       return;
     }
-    attachingTxIdRef.current = { id: tx.id, date: tx.date, category: tx.category, description: tx.description };
+    attachingTxIdRef.current = {
+      id: tx.id,
+      date: tx.date,
+      category: tx.category,
+      description: tx.description,
+    };
     fileInputRef.current?.click();
   };
 
@@ -261,7 +275,9 @@ const TransactionTable = ({
 
     const txId = txMeta.id;
     const ext = file.name.includes(".") ? file.name.split(".").pop()! : "";
-    const renamedFile = new File([file], buildReceiptName(txMeta, ext), { type: file.type });
+    const renamedFile = new File([file], buildReceiptName(txMeta, ext), {
+      type: file.type,
+    });
 
     setUploadingIds((prev) => new Set([...prev, txId]));
     try {
@@ -540,7 +556,7 @@ const TransactionTable = ({
   };
 
   const selectableIds = useMemo(
-    () => transactions.filter((tx) => !tx.isGroup).map((tx) => tx.id),
+    () => transactions.map((tx) => tx.id),
     [transactions],
   );
 
@@ -549,13 +565,12 @@ const TransactionTable = ({
     selectableIds.every((id) => selectedIds.has(id));
   const someSelected = selectableIds.some((id) => selectedIds.has(id));
 
-  const selectedUngroupedIds = useMemo(
-    () =>
-      [...selectedIds.values()]
-        .filter((tx) => !tx.isGroup && tx.parentId === null)
-        .map((tx) => tx.id),
-    [selectedIds],
-  );
+  const canGroup = useMemo(() => {
+    const selected = [...selectedIds.values()];
+    if (selected.length < 1) return false;
+    const firstParentId = selected[0].parentId ?? null;
+    return selected.every((tx) => (tx.parentId ?? null) === firstParentId);
+  }, [selectedIds]);
 
   useEffect(() => {
     if (pendingFocusIdRef.current) {
@@ -564,7 +579,7 @@ const TransactionTable = ({
       setEditingCell({ id, field: "description" });
       setEditValue("New Group");
     }
-  }, [transactions]);
+  }, [transactions, allTransactions]);
 
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -704,6 +719,309 @@ const TransactionTable = ({
   const addInputClass = `w-full bg-transparent border-0 border-b border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:ring-0 p-1 text-[13px] text-gray-900 dark:text-foreground placeholder-gray-400 dark:placeholder-gray-500 transition-colors outline-none`;
   const editInputClass = `w-full bg-transparent border-0 outline-none text-[13px] text-gray-900 dark:text-foreground p-0 m-0 focus:ring-0 caret-gray-400 dark:caret-gray-500`;
 
+  // Recursive child row renderer — handles groups at any nesting depth
+  const renderChildRows = (children: Transaction[]): React.ReactNode =>
+    children.map((child) => {
+      const childIsExpanded = child.isGroup && expandedIds.has(child.id);
+      const grandchildren = child.isGroup
+        ? allTransactions.filter((gc) => gc.parentId === child.id)
+        : [];
+
+      return (
+        <React.Fragment key={child.id}>
+          <tr
+            className={`group transition-colors ${
+              selectedIds.has(child.id)
+                ? "bg-blue-50/60 hover:bg-gray-50 dark:bg-[#282828] dark:hover:bg-[#424242]"
+                : "hover:bg-gray-50/70 dark:hover:bg-[#424242]"
+            }`}
+          >
+            <td className={`${tdClass} w-8 align-middle`}>
+              <label
+                className="flex items-center justify-center w-full h-full min-h-8 cursor-pointer select-none"
+                onMouseDown={(e) => {
+                  shiftKeyRef.current = e.shiftKey;
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(child.id)}
+                  onChange={() => {
+                    if (
+                      shiftKeyRef.current &&
+                      lastClickedIdRef.current !== null
+                    ) {
+                      const lastIdx = children.findIndex(
+                        (c) => c.id === lastClickedIdRef.current,
+                      );
+                      const currIdx = children.findIndex(
+                        (c) => c.id === child.id,
+                      );
+                      if (lastIdx !== -1) {
+                        const from = Math.min(lastIdx, currIdx);
+                        const to = Math.max(lastIdx, currIdx);
+                        onSelectAll(children.slice(from, to + 1));
+                        return;
+                      }
+                    }
+                    onToggleSelect(child);
+                    lastClickedIdRef.current = child.id;
+                  }}
+                  className="w-3.5 h-3.5 accent-gray-900 dark:accent-gray-300 cursor-pointer"
+                />
+              </label>
+            </td>
+
+            {/* Date */}
+            <td className={`${tdClass}`}>
+              <div className="flex items-center gap-1.5">
+                {isEditing(child.id, "date") ? (
+                  <input
+                    ref={inputRef as React.RefObject<HTMLInputElement>}
+                    type="date"
+                    value={editValue}
+                    onChange={(e) => {
+                      setEditValue(e.target.value);
+                      if (e.target.value) {
+                        onUpdate(child.id, { date: e.target.value });
+                        setEditingCell(null);
+                      }
+                    }}
+                    onBlur={commitEdit}
+                    onKeyDown={handleKeyDown}
+                    className={`${editInputClass}`}
+                  />
+                ) : (
+                  <span
+                    className="cursor-text"
+                    onClick={() =>
+                      !isEditing(child.id, "date") &&
+                      startEditing(child.id, "date", child.date, child.isGroup)
+                    }
+                  >
+                    {formatDate(child.date)}
+                  </span>
+                )}
+              </div>
+            </td>
+
+            {/* Description */}
+            <td
+              className={`${tdClass} dark:text-foreground`}
+              onClick={() =>
+                !isEditing(child.id, "description") &&
+                startEditing(
+                  child.id,
+                  "description",
+                  child.description,
+                  child.isGroup,
+                )
+              }
+            >
+              {isEditing(child.id, "description") ? (
+                <input
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={handleKeyDown}
+                  className={`${editInputClass}`}
+                />
+              ) : (
+                <span className="flex items-center justify-between gap-1.5 cursor-text py-px min-w-0">
+                  <span className="uppercase truncate block">
+                    {child.description}
+                  </span>
+                  {child.isGroup && child.childCount !== undefined && (
+                    <span className="text-gray-400 dark:text-gray-500 text-[11px] font-normal shrink-0">
+                      · {child.childCount}{" "}
+                      {child.childCount === 1 ? "Transaction" : "Transactions"}
+                    </span>
+                  )}
+                  {child.isGroup && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleExpand(child.id);
+                      }}
+                      className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-foreground transition-colors shrink-0"
+                      aria-label={
+                        childIsExpanded ? "Collapse group" : "Expand group"
+                      }
+                    >
+                      {childIsExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </span>
+              )}
+            </td>
+
+            {/* Category */}
+            <td
+              className={`${tdClass}`}
+              onClick={() =>
+                !isEditing(child.id, "category") &&
+                startEditing(
+                  child.id,
+                  "category",
+                  child.category ?? "",
+                  child.isGroup,
+                )
+              }
+            >
+              {isEditing(child.id, "category") ? (
+                <input
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  type="text"
+                  value={editValue}
+                  autoCapitalize="none"
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={handleKeyDown}
+                  className={editInputClass}
+                />
+              ) : (
+                <span className="cursor-text block py-px">
+                  {child.category ?? ""}
+                </span>
+              )}
+            </td>
+
+            {/* Amount */}
+            <td
+              className={`${tdClass} text-right`}
+              onClick={() =>
+                !isEditing(child.id, "amount") &&
+                startEditing(child.id, "amount", child.amount, child.isGroup)
+              }
+            >
+              {isEditing(child.id, "amount") ? (
+                <input
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  type="number"
+                  step="0.01"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={handleKeyDown}
+                  className={`${editInputClass} text-right`}
+                />
+              ) : (
+                <span className="cursor-text block py-px">
+                  {formatAmount(child.amount)}
+                </span>
+              )}
+            </td>
+
+            {/* Status */}
+            <td
+              className={tdClass}
+              onClick={() =>
+                !isEditing(child.id, "status") &&
+                startEditing(child.id, "status", child.status, child.isGroup)
+              }
+            >
+              {isEditing(child.id, "status") ? (
+                <select
+                  ref={inputRef as React.RefObject<HTMLSelectElement>}
+                  value={editValue}
+                  onChange={(e) => {
+                    onUpdate(child.id, { status: e.target.value as Status });
+                    setEditingCell(null);
+                  }}
+                  onBlur={() => setEditingCell(null)}
+                  className={`${editInputClass}`}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="cursor-pointer">
+                  <StatusBadge status={child.status} />
+                </span>
+              )}
+            </td>
+
+            {/* Source */}
+            <td
+              className={`${tdClass}`}
+              onClick={() =>
+                !isEditing(child.id, "source") &&
+                startEditing(
+                  child.id,
+                  "source",
+                  child.source ?? "",
+                  child.isGroup,
+                )
+              }
+            >
+              {isEditing(child.id, "source") ? (
+                <input
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  type="text"
+                  value={editValue}
+                  autoCapitalize="none"
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={handleKeyDown}
+                  className={editInputClass}
+                />
+              ) : (
+                <span className="cursor-text block py-px">
+                  {child.source ?? ""}
+                </span>
+              )}
+            </td>
+
+            {/* File */}
+            <td className={`${tdClass} align-middle`}>
+              {!child.isGroup &&
+                (uploadingIds.has(child.id) ? (
+                  <FileText className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 animate-pulse" />
+                ) : child.driveFileId ? (
+                  <DriveFileCell
+                    fileId={child.driveFileId}
+                    onUnlink={() => onUpdate(child.id, { driveFileId: null })}
+                  />
+                ) : (
+                  <button
+                    onClick={() => handleAttach(child)}
+                    className="p-0.5 text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                    aria-label="Upload file to Drive"
+                    title="Upload file to Google Drive"
+                  >
+                    <Paperclip className="w-3.5 h-3.5" />
+                  </button>
+                ))}
+            </td>
+
+            {/* Unlink from group */}
+            <td className={`${tdClass}`}>
+              <button
+                aria-label="Remove from group"
+                title="Remove from group"
+                className="p-1 text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                onClick={() => onUnlinkChild(child.id)}
+              >
+                <Unlink className="w-3.5 h-3.5" />
+              </button>
+            </td>
+          </tr>
+
+          {/* Nested children when this child is itself an expanded group */}
+          {childIsExpanded && renderChildRows(grandchildren)}
+        </React.Fragment>
+      );
+    });
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Toolbar — always reserves space to prevent table shift */}
@@ -712,15 +1030,16 @@ const TransactionTable = ({
           {selectedIds.size} selected
         </span>
         <button
+          disabled={!canGroup}
           onClick={async () => {
-            if (selectedUngroupedIds.length < 1) return;
+            if (!canGroup) return;
             const newGroupId = await onCreateGroup("New Group");
             pendingFocusIdRef.current = newGroupId;
           }}
-          className="flex items-center gap-1 px-2 h-7 text-[12px] font-medium text-white bg-gray-800 dark:bg-[#e3e3e3] dark:text-background rounded transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-2 h-7 text-[12px] font-medium text-white bg-gray-800 dark:bg-[#e3e3e3] dark:text-background rounded transition-colors cursor-pointer disabled:cursor-not-allowed"
         >
           <Layers className="w-3.5 h-3.5" />
-          Merge
+          Group
         </button>
         <BulkActions
           selectedIds={selectedIds}
@@ -774,10 +1093,10 @@ const TransactionTable = ({
                       onChange={() => {
                         if (allSelected) {
                           for (const tx of transactions) {
-                            if (!tx.isGroup) onToggleSelect(tx);
+                            onToggleSelect(tx);
                           }
                         } else {
-                          onSelectAll(transactions.filter((tx) => !tx.isGroup));
+                          onSelectAll(transactions);
                         }
                       }}
                       className="w-3.5 h-3.5 accent-gray-700 dark:accent-gray-300 cursor-pointer"
@@ -962,7 +1281,10 @@ const TransactionTable = ({
             )}
             {/* Add Transaction Row */}
             {showAddRow && (
-              <tr className="border-b border-gray-100 dark:border-gray-800" onKeyDown={handleNewRowKeyDown}>
+              <tr
+                className="border-b border-gray-100 dark:border-gray-800"
+                onKeyDown={handleNewRowKeyDown}
+              >
                 <td className="h-9 px-3 border-r border-gray-100 dark:border-gray-800" />
                 {/* Date */}
                 <td className="h-9 px-3 border-r border-gray-100 dark:border-gray-800">
@@ -1093,22 +1415,39 @@ const TransactionTable = ({
                 const children = tx.isGroup
                   ? allTransactions.filter((c) => c.parentId === tx.id)
                   : [];
-                const isSelected = selectedIds.has(tx.id) && !tx.isGroup;
+                const isSelected = selectedIds.has(tx.id);
 
                 // Group filter state — computed here so parent row can use it
-                const activeFilters = tx.isGroup && isExpanded && showGroupFilters ? (groupFilters[tx.id] ?? []) : [];
-                const descSearch = tx.isGroup && isExpanded && showGroupFilters ? (groupDescSearch[tx.id] ?? "") : "";
-                const uniqueCategories = tx.isGroup && isExpanded
-                  ? [...new Set(children.map((c) => c.category ?? ""))].sort()
-                  : [];
-                const filteredChildren = tx.isGroup && isExpanded
-                  ? children.filter((c) => {
-                      const matchesCategory = activeFilters.length === 0 || activeFilters.includes(c.category ?? "");
-                      const matchesDesc = !descSearch || c.description.toLowerCase().includes(descSearch.toLowerCase());
-                      return matchesCategory && matchesDesc;
-                    })
-                  : children;
-                const filteredTotal = filteredChildren.reduce((sum, c) => sum + Number(c.amount), 0);
+                const activeFilters =
+                  tx.isGroup && isExpanded && showGroupFilters
+                    ? (groupFilters[tx.id] ?? [])
+                    : [];
+                const descSearch =
+                  tx.isGroup && isExpanded && showGroupFilters
+                    ? (groupDescSearch[tx.id] ?? "")
+                    : "";
+                const uniqueCategories =
+                  tx.isGroup && isExpanded
+                    ? [...new Set(children.map((c) => c.category ?? ""))].sort()
+                    : [];
+                const filteredChildren =
+                  tx.isGroup && isExpanded
+                    ? children.filter((c) => {
+                        const matchesCategory =
+                          activeFilters.length === 0 ||
+                          activeFilters.includes(c.category ?? "");
+                        const matchesDesc =
+                          !descSearch ||
+                          c.description
+                            .toLowerCase()
+                            .includes(descSearch.toLowerCase());
+                        return matchesCategory && matchesDesc;
+                      })
+                    : children;
+                const filteredTotal = filteredChildren.reduce(
+                  (sum, c) => sum + Number(c.amount),
+                  0,
+                );
                 const isFiltered = activeFilters.length > 0 || !!descSearch;
 
                 return (
@@ -1121,50 +1460,41 @@ const TransactionTable = ({
                           : "hover:bg-gray-50 dark:hover:bg-[#424242]"
                       }`}
                     >
-                      {/* Col 1: chevron for groups, checkbox for regular */}
+                      {/* Col 1: checkbox for all rows */}
                       <td className={`${tdClass} w-8 align-middle`}>
-                        {tx.isGroup ? (
-                          <div className="flex items-center justify-center w-full h-full min-h-8">
-                            <button
-                              onClick={() => onToggleExpand(tx.id)}
-                              className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-foreground transition-colors"
-                              aria-label={
-                                isExpanded ? "Collapse group" : "Expand group"
-                              }
-                            >
-                              {isExpanded ? (
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              ) : (
-                                <ChevronRight className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <label
-                            className="flex items-center justify-center w-full h-full min-h-8 cursor-pointer select-none"
-                            onMouseDown={(e) => { shiftKeyRef.current = e.shiftKey; }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {
-                                if (shiftKeyRef.current && lastClickedIdRef.current !== null) {
-                                  const lastIdx = transactions.findIndex(t => t.id === lastClickedIdRef.current);
-                                  const currIdx = transactions.findIndex(t => t.id === tx.id);
-                                  if (lastIdx !== -1) {
-                                    const from = Math.min(lastIdx, currIdx);
-                                    const to = Math.max(lastIdx, currIdx);
-                                    onSelectAll(transactions.slice(from, to + 1));
-                                    return;
-                                  }
+                        <label
+                          className="flex items-center justify-center w-full h-full min-h-8 cursor-pointer select-none"
+                          onMouseDown={(e) => {
+                            shiftKeyRef.current = e.shiftKey;
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (
+                                shiftKeyRef.current &&
+                                lastClickedIdRef.current !== null
+                              ) {
+                                const lastIdx = transactions.findIndex(
+                                  (t) => t.id === lastClickedIdRef.current,
+                                );
+                                const currIdx = transactions.findIndex(
+                                  (t) => t.id === tx.id,
+                                );
+                                if (lastIdx !== -1) {
+                                  const from = Math.min(lastIdx, currIdx);
+                                  const to = Math.max(lastIdx, currIdx);
+                                  onSelectAll(transactions.slice(from, to + 1));
+                                  return;
                                 }
-                                onToggleSelect(tx);
-                                lastClickedIdRef.current = tx.id;
-                              }}
-                              className="w-3.5 h-3.5 accent-gray-900 dark:accent-gray-300 cursor-pointer"
-                            />
-                          </label>
-                        )}
+                              }
+                              onToggleSelect(tx);
+                              lastClickedIdRef.current = tx.id;
+                            }}
+                            className="w-3.5 h-3.5 accent-gray-900 dark:accent-gray-300 cursor-pointer"
+                          />
+                        </label>
                       </td>
 
                       {/* Date */}
@@ -1222,21 +1552,42 @@ const TransactionTable = ({
                             className={`${editInputClass} font-medium`}
                           />
                         ) : (
-                          <span className="flex items-center gap-1.5 py-px min-w-0">
+                          <span className="flex items-center justify-between gap-1.5 py-px min-w-0 w-full">
                             <span className="uppercase truncate">
                               {tx.description}
                             </span>
-                            {tx.isGroup && tx.childCount !== undefined && (
-                              <span className="text-gray-400 dark:text-gray-500 text-[11px] font-normal">
-                                ·{" "}
-                                {isFiltered && isExpanded
-                                  ? `${filteredChildren.length} of ${tx.childCount}`
-                                  : tx.childCount}{" "}
-                                {tx.childCount === 1
-                                  ? "Transaction"
-                                  : "Transactions"}
-                              </span>
-                            )}
+
+                            <div className="flex items-center gap-2">
+                              {tx.isGroup &&
+                                tx.childCount !== undefined &&
+                                isFiltered &&
+                                isExpanded && (
+                                  <span className="text-gray-400 dark:text-gray-500 text-[11px] font-normal">
+                                    {filteredChildren.length}/{tx.childCount}{" "}
+                                    {tx.childCount === 1 ? "Txn" : "Txns"}
+                                  </span>
+                                )}
+                              {tx.isGroup && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleExpand(tx.id);
+                                  }}
+                                  className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-foreground transition-colors shrink-0"
+                                  aria-label={
+                                    isExpanded
+                                      ? "Collapse group"
+                                      : "Expand group"
+                                  }
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           </span>
                         )}
                       </td>
@@ -1277,12 +1628,7 @@ const TransactionTable = ({
                         className={`h-9 px-4 text-[13px] border-b border-r border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-900 dark:text-foreground font-medium text-right`}
                         onClick={() =>
                           !isEditing(tx.id, "amount") &&
-                          startEditing(
-                            tx.id,
-                            "amount",
-                            tx.amount,
-                            tx.isGroup,
-                          )
+                          startEditing(tx.id, "amount", tx.amount, tx.isGroup)
                         }
                       >
                         {isEditing(tx.id, "amount") ? (
@@ -1362,9 +1708,7 @@ const TransactionTable = ({
                             className={editInputClass}
                           />
                         ) : (
-                          <span className="block py-px">
-                            {tx.source ?? ""}
-                          </span>
+                          <span className="block py-px">{tx.source ?? ""}</span>
                         )}
                       </td>
 
@@ -1414,358 +1758,89 @@ const TransactionTable = ({
                     </tr>
 
                     {/* Child rows */}
-                    {tx.isGroup && isExpanded && (() => {
-                      return (
-                        <>
-                          {/* Filter bar */}
-                          {showGroupFilters && (
-                            <tr className="border-b border-gray-100 dark:border-gray-800 bg-transparent">
-                              {/* chevron col — x clear */}
-                              <td className="py-1.5 w-8 align-middle text-center border-r border-gray-100 dark:border-gray-800">
-                                {isFiltered && (
-                                  <button
-                                    onClick={() => {
-                                      onGroupFilterChange(tx.id, []);
-                                      setGroupDescSearch((prev) => ({ ...prev, [tx.id]: "" }));
-                                    }}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-                                    aria-label="Clear filters"
+                    {tx.isGroup &&
+                      isExpanded &&
+                      (() => {
+                        return (
+                          <>
+                            {/* Filter bar */}
+                            {showGroupFilters && (
+                              <tr className="border-b border-gray-100 dark:border-gray-800 bg-transparent">
+                                {/* chevron col — x clear */}
+                                <td className="py-1.5 w-8 align-middle text-center border-r border-gray-100 dark:border-gray-800">
+                                  {isFiltered && (
+                                    <button
+                                      onClick={() => {
+                                        onGroupFilterChange(tx.id, []);
+                                        setGroupDescSearch((prev) => ({
+                                          ...prev,
+                                          [tx.id]: "",
+                                        }));
+                                      }}
+                                      className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                                      aria-label="Clear filters"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </td>
+                                {/* date col — empty */}
+                                <td className="py-1.5 border-r border-gray-100 dark:border-gray-800" />
+                                {/* description col */}
+                                <td className="px-4 py-1.5 border-r border-gray-100 dark:border-gray-800">
+                                  <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={groupDescSearch[tx.id] ?? ""}
+                                    onChange={(e) =>
+                                      setGroupDescSearch((prev) => ({
+                                        ...prev,
+                                        [tx.id]: e.target.value,
+                                      }))
+                                    }
+                                    className="h-6 w-full bg-transparent text-[12px] text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 border border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 rounded px-1.5 outline-none transition-colors"
+                                  />
+                                </td>
+                                {/* category col */}
+                                <td className="px-4 py-1.5 border-r border-gray-100 dark:border-gray-800">
+                                  <select
+                                    value={
+                                      activeFilters.length === 0
+                                        ? "__all__"
+                                        : activeFilters[0]
+                                    }
+                                    onChange={(e) =>
+                                      onGroupFilterChange(
+                                        tx.id,
+                                        e.target.value !== "__all__"
+                                          ? [e.target.value]
+                                          : [],
+                                      )
+                                    }
+                                    className="h-6 w-full rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-[12px] text-gray-700 dark:text-gray-300 px-1.5 outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors cursor-pointer"
                                   >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </td>
-                              {/* date col — empty */}
-                              <td className="py-1.5 border-r border-gray-100 dark:border-gray-800" />
-                              {/* description col */}
-                              <td className="px-4 py-1.5 border-r border-gray-100 dark:border-gray-800">
-                                <input
-                                  type="text"
-                                  placeholder="Search..."
-                                  value={groupDescSearch[tx.id] ?? ""}
-                                  onChange={(e) =>
-                                    setGroupDescSearch((prev) => ({ ...prev, [tx.id]: e.target.value }))
-                                  }
-                                  className="h-6 w-full bg-transparent text-[12px] text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 border border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 rounded px-1.5 outline-none transition-colors"
-                                />
-                              </td>
-                              {/* category col */}
-                              <td className="px-4 py-1.5 border-r border-gray-100 dark:border-gray-800">
-                                <select
-                                  value={activeFilters.length === 0 ? "__all__" : activeFilters[0]}
-                                  onChange={(e) =>
-                                    onGroupFilterChange(tx.id, e.target.value !== "__all__" ? [e.target.value] : [])
-                                  }
-                                  className="h-6 w-full rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-[12px] text-gray-700 dark:text-gray-300 px-1.5 outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors cursor-pointer"
-                                >
-                                  <option value="__all__">All</option>
-                                  {uniqueCategories.map((cat) => (
-                                    <option key={cat} value={cat}>
-                                      {cat === "" ? "None" : cat}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              {/* remaining cols */}
-                              <td className="border-r border-gray-100 dark:border-gray-800" />
-                              <td className="border-r border-gray-100 dark:border-gray-800" />
-                              <td className="border-r border-gray-100 dark:border-gray-800" />
-                              <td className="border-r border-gray-100 dark:border-gray-800" />
-                              <td className="border-r border-gray-100 dark:border-gray-800" />
-                            </tr>
-                          )}
-
-                          {/* Filtered child rows */}
-                          {filteredChildren.map((child) => (
-                        <tr
-                          key={child.id}
-                          className={`group transition-colors ${
-                            selectedIds.has(child.id)
-                              ? "bg-blue-50/60 hover:bg-gray-50 dark:bg-[#282828] dark:hover:bg-[#424242]"
-                              : "hover:bg-gray-50/70 dark:hover:bg-[#424242]"
-                          }`}
-                        >
-                          <td className={`${tdClass} w-8 align-middle`}>
-                            <label
-                              className="flex items-center justify-center w-full h-full min-h-8 cursor-pointer select-none"
-                              onMouseDown={(e) => { shiftKeyRef.current = e.shiftKey; }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.has(child.id)}
-                                onChange={() => {
-                                  if (shiftKeyRef.current && lastClickedIdRef.current !== null) {
-                                    const lastIdx = filteredChildren.findIndex(c => c.id === lastClickedIdRef.current);
-                                    const currIdx = filteredChildren.findIndex(c => c.id === child.id);
-                                    if (lastIdx !== -1) {
-                                      const from = Math.min(lastIdx, currIdx);
-                                      const to = Math.max(lastIdx, currIdx);
-                                      onSelectAll(filteredChildren.slice(from, to + 1));
-                                      return;
-                                    }
-                                  }
-                                  onToggleSelect(child);
-                                  lastClickedIdRef.current = child.id;
-                                }}
-                                className="w-3.5 h-3.5 accent-gray-900 dark:accent-gray-300 cursor-pointer"
-                              />
-                            </label>
-                          </td>
-
-                          {/* Date indented */}
-                          <td className={`${tdClass}`}>
-                            <div className="flex items-center gap-1.5">
-                              {isEditing(child.id, "date") ? (
-                                <input
-                                  ref={
-                                    inputRef as React.RefObject<HTMLInputElement>
-                                  }
-                                  type="date"
-                                  value={editValue}
-                                  onChange={(e) => {
-                                    setEditValue(e.target.value);
-                                    if (e.target.value) {
-                                      onUpdate(child.id, {
-                                        date: e.target.value,
-                                      });
-                                      setEditingCell(null);
-                                    }
-                                  }}
-                                  onBlur={commitEdit}
-                                  onKeyDown={handleKeyDown}
-                                  className={`${editInputClass}`}
-                                />
-                              ) : (
-                                <span
-                                  className="cursor-text"
-                                  onClick={() =>
-                                    !isEditing(child.id, "date") &&
-                                    startEditing(
-                                      child.id,
-                                      "date",
-                                      child.date,
-                                      false,
-                                    )
-                                  }
-                                >
-                                  {formatDate(child.date)}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Description */}
-                          <td
-                            className={`${tdClass} dark:text-foreground`}
-                            onClick={() =>
-                              !isEditing(child.id, "description") &&
-                              startEditing(
-                                child.id,
-                                "description",
-                                child.description,
-                                false,
-                              )
-                            }
-                          >
-                            <div className="">
-                              {isEditing(child.id, "description") ? (
-                                <input
-                                  ref={
-                                    inputRef as React.RefObject<HTMLInputElement>
-                                  }
-                                  type="text"
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  onBlur={commitEdit}
-                                  onKeyDown={handleKeyDown}
-                                  className={`${editInputClass}`}
-                                />
-                              ) : (
-                                <span className="cursor-text block py-px min-w-0">
-                                  <span className="uppercase truncate block">
-                                    {child.description}
-                                  </span>
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Category */}
-                          <td
-                            className={`${tdClass}`}
-                            onClick={() =>
-                              !isEditing(child.id, "category") &&
-                              startEditing(
-                                child.id,
-                                "category",
-                                child.category ?? "",
-                                false,
-                              )
-                            }
-                          >
-                            {isEditing(child.id, "category") ? (
-                              <input
-                                ref={inputRef as React.RefObject<HTMLInputElement>}
-                                type="text"
-                                value={editValue}
-                                autoCapitalize="none"
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={commitEdit}
-                                onKeyDown={handleKeyDown}
-                                className={editInputClass}
-                              />
-                            ) : (
-                              <span className="cursor-text block py-px">
-                                {child.category ?? ""}
-                              </span>
+                                    <option value="__all__">All</option>
+                                    {uniqueCategories.map((cat) => (
+                                      <option key={cat} value={cat}>
+                                        {cat === "" ? "None" : cat}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                                {/* remaining cols */}
+                                <td className="border-r border-gray-100 dark:border-gray-800" />
+                                <td className="border-r border-gray-100 dark:border-gray-800" />
+                                <td className="border-r border-gray-100 dark:border-gray-800" />
+                                <td className="border-r border-gray-100 dark:border-gray-800" />
+                                <td className="border-r border-gray-100 dark:border-gray-800" />
+                              </tr>
                             )}
-                          </td>
 
-                          {/* Amount */}
-                          <td
-                            className={`${tdClass} text-right`}
-                            onClick={() =>
-                              !isEditing(child.id, "amount") &&
-                              startEditing(
-                                child.id,
-                                "amount",
-                                child.amount,
-                                false,
-                              )
-                            }
-                          >
-                            {isEditing(child.id, "amount") ? (
-                              <input
-                                ref={
-                                  inputRef as React.RefObject<HTMLInputElement>
-                                }
-                                type="number"
-                                step="0.01"
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={commitEdit}
-                                onKeyDown={handleKeyDown}
-                                className={`${editInputClass} text-right`}
-                              />
-                            ) : (
-                              <span className="cursor-text block py-px">
-                                {formatAmount(child.amount)}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Status */}
-                          <td
-                            className={tdClass}
-                            onClick={() =>
-                              !isEditing(child.id, "status") &&
-                              startEditing(
-                                child.id,
-                                "status",
-                                child.status,
-                                false,
-                              )
-                            }
-                          >
-                            {isEditing(child.id, "status") ? (
-                              <select
-                                ref={
-                                  inputRef as React.RefObject<HTMLSelectElement>
-                                }
-                                value={editValue}
-                                onChange={(e) => {
-                                  onUpdate(child.id, {
-                                    status: e.target.value as Status,
-                                  });
-                                  setEditingCell(null);
-                                }}
-                                onBlur={() => setEditingCell(null)}
-                                className={`${editInputClass}`}
-                              >
-                                {STATUSES.map((s) => (
-                                  <option key={s} value={s}>
-                                    {s}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className="cursor-pointer">
-                                <StatusBadge status={child.status} />
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Source */}
-                          <td
-                            className={`${tdClass}`}
-                            onClick={() =>
-                              !isEditing(child.id, "source") &&
-                              startEditing(
-                                child.id,
-                                "source",
-                                child.source ?? "",
-                                false,
-                              )
-                            }
-                          >
-                            {isEditing(child.id, "source") ? (
-                              <input
-                                ref={inputRef as React.RefObject<HTMLInputElement>}
-                                type="text"
-                                value={editValue}
-                                autoCapitalize="none"
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={commitEdit}
-                                onKeyDown={handleKeyDown}
-                                className={editInputClass}
-                              />
-                            ) : (
-                              <span className="cursor-text block py-px">
-                                {child.source ?? ""}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* File */}
-                          <td className={`${tdClass} align-middle`}>
-                            {uploadingIds.has(child.id) ? (
-                              <FileText className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 animate-pulse" />
-                            ) : child.driveFileId ? (
-                              <DriveFileCell
-                                fileId={child.driveFileId}
-                                onUnlink={() =>
-                                  onUpdate(child.id, { driveFileId: null })
-                                }
-                              />
-                            ) : (
-                              <button
-                                onClick={() => handleAttach(child)}
-                                className="p-0.5 text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-                                aria-label="Upload file to Drive"
-                                title="Upload file to Google Drive"
-                              >
-                                <Paperclip className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </td>
-
-                          {/* Unlink from group */}
-                          <td className={`${tdClass}`}>
-                            <button
-                              aria-label="Remove from group"
-                              title="Remove from group"
-                              className="p-1 text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-                              onClick={() => onUnlinkChild(child.id)}
-                            >
-                              <Unlink className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                          ))}
-
-                        </>
-                      );
-                    })()}
+                            {/* Filtered child rows */}
+                            {renderChildRows(filteredChildren)}
+                          </>
+                        );
+                      })()}
                   </React.Fragment>
                 );
               })
