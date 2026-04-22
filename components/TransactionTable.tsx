@@ -17,6 +17,7 @@ import {
 import { Transaction, SortConfig, Status, STATUSES } from "@/types/transaction";
 import StatusBadge from "./StatusBadge";
 import BulkActions from "./BulkActions";
+import ContextMenu from "./ContextMenu";
 
 function DriveFileCell({
   fileId,
@@ -223,6 +224,18 @@ const TransactionTable = ({
   const [newTransaction, setNewTransaction] =
     useState<Partial<Transaction>>(emptyNewTransaction);
   const [showAddErrors, setShowAddErrors] = useState(false);
+  const [contextMenuPos, setContextMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const handleRowContextMenu = (e: React.MouseEvent, tx: Transaction) => {
+    e.preventDefault();
+    if (!selectedIds.has(tx.id)) {
+      onToggleSelect(tx);
+    }
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+  };
 
   useEffect(() => {
     if (!showAddRow) {
@@ -556,21 +569,19 @@ const TransactionTable = ({
           </div>
         </div>
         <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">Sort by abs value</span>
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+            Sort by abs value
+          </span>
           <button
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onToggleAbsSort()}
             className={`relative w-7 h-4 rounded-full transition-colors ${
-              absValue
-                ? "bg-blue-500"
-                : "bg-gray-200 dark:bg-gray-700"
+              absValue ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"
             }`}
           >
             <span
               className={`absolute top-0.5 left-0 w-3 h-3 rounded-full bg-white transition-transform ${
-                absValue
-                  ? "translate-x-3.5"
-                  : "translate-x-0.5"
+                absValue ? "translate-x-3.5" : "translate-x-0.5"
               }`}
             />
           </button>
@@ -700,6 +711,12 @@ const TransactionTable = ({
     newDescriptionRef.current?.focus();
   };
 
+  const handleCreateGroup = async () => {
+    if (!canGroup) return;
+    const newGroupId = await onCreateGroup("New Group");
+    pendingFocusIdRef.current = newGroupId;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const userTimezoneOffset = date.getTimezoneOffset() * 60000;
@@ -759,6 +776,7 @@ const TransactionTable = ({
                 ? "bg-blue-50/60 hover:bg-gray-50 dark:bg-[#282828] dark:hover:bg-[#424242]"
                 : "hover:bg-gray-50/70 dark:hover:bg-[#424242]"
             }`}
+            onContextMenu={(e) => handleRowContextMenu(e, child)}
           >
             <td className={`${tdClass} w-8 align-middle`}>
               <label
@@ -857,12 +875,12 @@ const TransactionTable = ({
                   <span className="uppercase truncate block">
                     {child.description}
                   </span>
-                  {child.isGroup && child.childCount !== undefined && (
+                  {/* {child.isGroup && child.childCount !== undefined && (
                     <span className="text-gray-400 dark:text-gray-500 text-[11px] font-normal shrink-0">
                       · {child.childCount}{" "}
                       {child.childCount === 1 ? "Transaction" : "Transactions"}
                     </span>
-                  )}
+                  )} */}
                   {child.isGroup && (
                     <button
                       onClick={(e) => {
@@ -1050,16 +1068,22 @@ const TransactionTable = ({
     <div className="w-full h-full flex flex-col">
       {/* Toolbar — always reserves space to prevent table shift */}
       <div className="flex items-center gap-1 mb-3 flex-wrap h-8 shrink-0">
-        <span className="text-[12px] text-gray-400 dark:text-gray-500 tabular-nums w-18 shrink-0">
+        <span className="text-[12px] text-gray-400 dark:text-gray-500 tabular-nums w-18 shrink-0 text-right">
           {selectedIds.size} selected
         </span>
         <button
-          disabled={!canGroup}
-          onClick={async () => {
-            if (!canGroup) return;
-            const newGroupId = await onCreateGroup("New Group");
-            pendingFocusIdRef.current = newGroupId;
+          onClick={() => {
+            onClearSelection();
           }}
+          className="p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 transition-colors cursor-pointer"
+          aria-label="Clear selection"
+          title="Clear All Selected"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <button
+          disabled={!canGroup}
+          onClick={handleCreateGroup}
           className="flex items-center gap-1 px-2 h-7 text-[12px] font-medium text-white bg-gray-800 dark:bg-[#e3e3e3] dark:text-background rounded transition-colors cursor-pointer disabled:cursor-not-allowed"
         >
           <Layers className="w-3.5 h-3.5" />
@@ -1075,15 +1099,6 @@ const TransactionTable = ({
           allCategories={allCategories}
           allSources={allSources}
         />
-        <button
-          onClick={() => {
-            onClearSelection();
-          }}
-          className="p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 transition-colors"
-          aria-label="Clear selection"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
 
       <div
@@ -1210,7 +1225,7 @@ const TransactionTable = ({
                         openFilterCol === "amount" ? null : "amount",
                       );
                     }}
-                    className={`p-0.5 rounded transition-colors ${textFilters.amountMin || textFilters.amountMax || (absValue) ? "text-blue-500 dark:text-blue-400" : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"}`}
+                    className={`p-0.5 rounded transition-colors ${textFilters.amountMin || textFilters.amountMax || absValue ? "text-blue-500 dark:text-blue-400" : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"}`}
                   >
                     <ListFilter className="w-3 h-3" />
                   </button>
@@ -1483,6 +1498,7 @@ const TransactionTable = ({
                           ? "bg-blue-50/60 hover:bg-gray-50 dark:bg-[#282828] dark:hover:bg-[#424242]"
                           : "hover:bg-gray-50 dark:hover:bg-[#424242]"
                       }`}
+                      onContextMenu={(e) => handleRowContextMenu(e, tx)}
                     >
                       {/* Col 1: checkbox for all rows */}
                       <td className={`${tdClass} w-8 align-middle`}>
@@ -1597,7 +1613,7 @@ const TransactionTable = ({
                                     e.stopPropagation();
                                     onToggleExpand(tx.id);
                                   }}
-                                  className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-foreground transition-colors shrink-0"
+                                  className="px-1 py-1 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-foreground transition-colors shrink-0 cursor-pointer"
                                   aria-label={
                                     isExpanded
                                       ? "Collapse group"
@@ -1878,6 +1894,21 @@ const TransactionTable = ({
         className="hidden"
         onChange={handleFileSelected}
       />
+      {contextMenuPos && (
+        <ContextMenu
+          position={contextMenuPos}
+          onClose={() => setContextMenuPos(null)}
+          selectedIds={selectedIds}
+          onBulkDelete={onBulkDelete}
+          onBulkUpdate={onBulkUpdate}
+          onClearSelection={onClearSelection}
+          onAddToGroup={onAddToGroup}
+          onCreateGroup={handleCreateGroup}
+          allGroups={allGroups}
+          allCategories={allCategories}
+          allSources={allSources}
+        />
+      )}
     </div>
   );
 };

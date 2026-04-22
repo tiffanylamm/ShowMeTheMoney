@@ -497,6 +497,32 @@ const Home = () => {
 
     clearSelected();
 
+    // Update parentId for any selected groups in allGroups
+    const selectedGroupIds = selectedTxs
+      .filter((tx) => tx.isGroup)
+      .map((tx) => tx.id);
+    if (selectedGroupIds.length > 0) {
+      setAllGroups((prev) =>
+        prev.map((g) =>
+          selectedGroupIds.includes(g.id) ? { ...g, parentId: groupId } : g,
+        ),
+      );
+    }
+
+    // Remove any moved top-level items from pageRows immediately (avoids
+    // duplicate render while fetchPage is in flight)
+    const movedFromTopLevel = selectedTxs
+      .filter((tx) => !tx.parentId)
+      .map((tx) => tx.id);
+    if (movedFromTopLevel.length > 0) {
+      setPageRows((prev) =>
+        prev.filter((tx) => !movedFromTopLevel.includes(tx.id)),
+      );
+      if (pinnedRow && movedFromTopLevel.includes(pinnedRow.id)) {
+        setPinnedRow(null);
+      }
+    }
+
     // Update childRows: remove from old groups, add to new group
     setChildRows((prev) => {
       const next = { ...prev };
@@ -579,41 +605,138 @@ const Home = () => {
 
   const handleUnlinkChild = async (childId: string) => {
     const parentGroupId = parentMap.get(childId) ?? null;
+    // Child should move to its parent group's parent (grandparent), not always root
+    const grandparentId = parentGroupId
+      ? (parentMap.get(parentGroupId) ?? null)
+      : null;
 
     await fetch(`/api/transactions/${childId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parentId: null }),
+      body: JSON.stringify({ parentId: grandparentId }),
     });
 
     if (parentGroupId) {
-      const remaining = childRows[parentGroupId].filter(
+      const remaining = (childRows[parentGroupId] ?? []).filter(
         (tx) => tx.id !== childId,
       );
+
       if (remaining.length === 0) {
-        await handleDeleteTransaction(parentGroupId);
-        return;
+        // Delete the now-empty parent group directly (avoids fetchPage for nested case)
+        await fetch(`/api/transactions/${parentGroupId}`, { method: "DELETE" });
+
+        setExpandedIds((prev) => {
+          const s = new Set(prev);
+          s.delete(parentGroupId);
+          return s;
+        });
+        setChildRows((prev) => {
+          const next = { ...prev };
+          delete next[parentGroupId];
+          // Remove deleted group from grandparent's children list
+          if (grandparentId && next[grandparentId]) {
+            next[grandparentId] = next[grandparentId].filter(
+              (tx) => tx.id !== parentGroupId,
+            );
+          }
+          return next;
+        });
+        setAllGroups((prev) => prev.filter((g) => g.id !== parentGroupId));
+        setPageRows((prev) => prev.filter((tx) => tx.id !== parentGroupId));
+        setPinnedRow((prev) => (prev?.id === parentGroupId ? null : prev));
+        fetchMetadata();
+      } else {
+        // Update parent group summary and remove child from its list
+        const groupUpdates = computeGroupFields(remaining);
+        setPageRows((prev) =>
+          prev.map((tx) =>
+            tx.id === parentGroupId ? { ...tx, ...groupUpdates } : tx,
+          ),
+        );
+        setAllGroups((prev) =>
+          prev.map((g) =>
+            g.id === parentGroupId ? { ...g, ...groupUpdates } : g,
+          ),
+        );
+        setChildRows((prev) => {
+          const next = { ...prev };
+          if (next[parentGroupId]) {
+            next[parentGroupId] = next[parentGroupId].filter(
+              (tx) => tx.id !== childId,
+            );
+          }
+          // Update parent's entry in grandparent's children list
+          if (grandparentId && next[grandparentId]) {
+            next[grandparentId] = next[grandparentId].map((tx) =>
+              tx.id === parentGroupId ? { ...tx, ...groupUpdates } : tx,
+            );
+          }
+          return next;
+        });
+        await fetch(`/api/transactions/${parentGroupId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(groupUpdates),
+        });
       }
-      await handleUpdateTransaction(
-        parentGroupId,
-        computeGroupFields(remaining),
-      );
     }
 
-    fetchPage({
-      page: currentPage,
-      sortBy: sortConfig?.key ?? null,
-      sortDir: sortConfig?.direction ?? null,
-      sortAbs: absValue,
-    });
+    if (grandparentId) {
+      // Re-fetch grandparent's children — now includes the re-parented child
+      const res = await fetch(`/api/transactions?parentId=${grandparentId}`);
+      const newGrandparentChildren: Transaction[] = await res.json();
+      setChildRows((prev) => ({ ...prev, [grandparentId]: newGrandparentChildren }));
 
-    setChildRows((prev) => {
-      const next = { ...prev };
-      for (const groupId of Object.keys(next)) {
-        next[groupId] = next[groupId].filter((tx) => tx.id !== childId);
+      // Recompute and persist grandparent's summary
+      const grandparentUpdates = computeGroupFields(newGrandparentChildren);
+      setPageRows((prev) =>
+        prev.map((tx) =>
+          tx.id === grandparentId ? { ...tx, ...grandparentUpdates } : tx,
+        ),
+      );
+      setAllGroups((prev) =>
+        prev.map((g) =>
+          g.id === grandparentId ? { ...g, ...grandparentUpdates } : g,
+        ),
+      );
+      setPinnedRow((prev) =>
+        prev?.id === grandparentId ? { ...prev, ...grandparentUpdates } : prev,
+      );
+      // If grandparent is itself nested, update its entry in its parent's list
+      const greatGrandparentId = parentMap.get(grandparentId);
+      if (greatGrandparentId) {
+        setChildRows((prev) => {
+          const next = { ...prev };
+          if (next[greatGrandparentId]) {
+            next[greatGrandparentId] = next[greatGrandparentId].map((tx) =>
+              tx.id === grandparentId ? { ...tx, ...grandparentUpdates } : tx,
+            );
+          }
+          return next;
+        });
       }
-      return next;
-    });
+      await fetch(`/api/transactions/${grandparentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(grandparentUpdates),
+      });
+    } else {
+      // Child goes to root — remove from all child rows and refresh page
+      setChildRows((prev) => {
+        const next = { ...prev };
+        for (const groupId of Object.keys(next)) {
+          next[groupId] = next[groupId].filter((tx) => tx.id !== childId);
+        }
+        return next;
+      });
+
+      fetchPage({
+        page: currentPage,
+        sortBy: sortConfig?.key ?? null,
+        sortDir: sortConfig?.direction ?? null,
+        sortAbs: absValue,
+      });
+    }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
