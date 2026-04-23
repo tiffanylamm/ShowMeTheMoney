@@ -16,6 +16,7 @@ import ContextMenu from "./ContextMenu";
 import TransactionTableHeader from "./TransactionTableHeader";
 import DriveFile, { AttachButton } from "./DriveFileCell";
 import AddTransactionRow from "./AddTransactionRow";
+import useEditingCell from "@/hooks/useEditingCell";
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -84,16 +85,6 @@ function buildReceiptName(
   const base = parts.join("_");
   return ext ? `${base}.${ext}` : base;
 }
-
-const LOCKED_GROUP_FIELDS = new Set(["date", "amount", "status", "source"]);
-
-type EditableFields =
-  | "date"
-  | "description"
-  | "category"
-  | "amount"
-  | "status"
-  | "source";
 
 const TransactionTable = ({
   transactions,
@@ -165,6 +156,18 @@ const TransactionTable = ({
     fetch("/api/drive/token").then((r) => setDriveConnected(r.ok));
   }, []);
 
+  const {
+    editingCell,
+    editValue,
+    inputRef,
+    isEditing,
+    startEditing,
+    commitEdit,
+    handleKeyDown,
+    setEditValue,
+    setEditingCell,
+  } = useEditingCell({ allTransactions, onUpdate });
+
   const handleAttach = (
     tx: Pick<Transaction, "id" | "date" | "category" | "description">,
   ) => {
@@ -222,12 +225,6 @@ const TransactionTable = ({
     }
   };
   const pendingFocusIdRef = useRef<string | null>(null);
-  const [editingCell, setEditingCell] = useState<{
-    id: string;
-    field: EditableFields;
-  } | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
-  const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -272,66 +269,6 @@ const TransactionTable = ({
     }
   }, [transactions, allTransactions]);
 
-  useEffect(() => {
-    if (editingCell && inputRef.current) {
-      inputRef.current.focus();
-      if (
-        inputRef.current instanceof HTMLInputElement &&
-        inputRef.current.type === "text"
-      ) {
-        inputRef.current.select();
-      }
-    }
-  }, [editingCell]);
-
-  const startEditing = (
-    id: string,
-    field: EditableFields,
-    currentValue: string | number,
-    isGroupRow: boolean,
-  ) => {
-    if (isGroupRow && LOCKED_GROUP_FIELDS.has(field)) return;
-    setEditingCell({ id, field });
-    setEditValue(String(currentValue));
-  };
-
-  const commitEdit = () => {
-    if (!editingCell) return;
-    const { id, field } = editingCell;
-    const tx = allTransactions.find((t) => t.id === id);
-    if (field === "amount") {
-      const parsed = parseFloat(editValue);
-      if (!isNaN(parsed) && parsed !== Number(tx?.amount))
-        onUpdate(id, { amount: parsed });
-    } else if (field === "date") {
-      if (editValue && editValue !== tx?.date)
-        onUpdate(id, { date: editValue });
-    } else if (field === "description") {
-      const trimmed = editValue.trim();
-      if (trimmed && trimmed !== tx?.description)
-        onUpdate(id, { description: trimmed });
-    } else if (field === "category") {
-      const val = editValue.trim() || null;
-      if (val !== (tx?.category ?? null)) onUpdate(id, { category: val });
-    } else if (field === "source") {
-      const val = editValue.trim() || null;
-      if (val !== (tx?.source ?? null)) onUpdate(id, { source: val });
-    } else if (field === "status") {
-      if (editValue !== tx?.status)
-        onUpdate(id, { status: editValue as Status });
-    }
-    setEditingCell(null);
-    setEditValue("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") commitEdit();
-    else if (e.key === "Escape") {
-      setEditingCell(null);
-      setEditValue("");
-    }
-  };
-
   const handleCreateGroup = async () => {
     if (!canGroup) return;
     const newGroupId = await onCreateGroup("New Group");
@@ -363,9 +300,6 @@ const TransactionTable = ({
       </span>
     );
   };
-
-  const isEditing = (id: string, field: EditableFields) =>
-    editingCell?.id === id && editingCell?.field === field;
 
   const tdClass = `h-9 px-4 text-[13px] border-b border-r border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 whitespace-nowrap`;
   const editInputClass = `w-full bg-transparent border-0 outline-none text-[13px] text-gray-900 dark:text-foreground p-0 m-0 focus:ring-0 caret-gray-400 dark:caret-gray-500`;
