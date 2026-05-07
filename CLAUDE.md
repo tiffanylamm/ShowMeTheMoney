@@ -34,6 +34,7 @@ BETTER_AUTH_SECRET    # Random secret for Better Auth (required)
 BETTER_AUTH_URL       # Auth origin, e.g. http://localhost:3000 (required)
 GOOGLE_CLIENT_ID      # Google OAuth (optional)
 GOOGLE_CLIENT_SECRET  # Google OAuth (optional)
+GEMINI_API_KEY        
 ```
 
 ### Data Flow
