@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Bundles a minimal self-contained server into .next/standalone so the
+  // Docker runtime image only needs that output plus static assets.
+  output: "standalone",
   async headers() {
     return [
       {

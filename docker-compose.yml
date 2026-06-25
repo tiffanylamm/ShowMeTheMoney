@@ -1,0 +1,10 @@
+# One-command setup for any device: `docker compose up --build`
+# Reads secrets from .env.local (never baked into the image).
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    restart: unless-stopped

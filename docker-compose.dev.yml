@@ -1,0 +1,21 @@
+# Development setup with live editing + hot reload.
+# Run with: docker compose -f docker-compose.dev.yml up --build
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      # Makes Next.js file-watching reliable inside Docker on macOS/Windows.
+      - WATCHPACK_POLLING=true
+    volumes:
+      # Mount your source so edits on the host are seen live in the container.
+      - .:/app
+      # Anonymous volumes keep the container's own node_modules and .next,
+      # so the host folder doesn't overwrite them (different OS/arch builds).
+      - /app/node_modules
+      - /app/.next
