@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
+import { transactions, pages } from "@/lib/db/schema";
 import { eq, desc, asc, and, isNull, ilike, or, count, sum, inArray, gte, lte, SQL, sql } from "drizzle-orm";
 import { STATUSES, UPDATABLE_FIELDS } from "@/types/transaction";
 
@@ -26,9 +26,17 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
 
+  const pageId = url.searchParams.get("pageId");
+  if (!pageId) {
+    return Response.json({ error: "pageId is required" }, { status: 400 });
+  }
+
   // Metadata branch — all groups, distinct categories, distinct sources
   if (url.searchParams.get("metadata") === "true") {
-    const userFilter = eq(transactions.userId, session.user.id);
+    const userFilter = and(
+      eq(transactions.userId, session.user.id),
+      eq(transactions.pageId, pageId),
+    );
     const [groups, categories, sources] = await Promise.all([
       db
         .select()
@@ -61,6 +69,7 @@ export async function GET(request: Request) {
       .where(
         and(
           eq(transactions.userId, session.user.id),
+          eq(transactions.pageId, pageId),
           eq(transactions.parentId, parentIdParam),
         ),
       )
@@ -86,6 +95,7 @@ export async function GET(request: Request) {
 
   const conditions: SQL[] = [
     eq(transactions.userId, session.user.id),
+    eq(transactions.pageId, pageId),
     isNull(transactions.parentId),
   ];
 
@@ -180,6 +190,7 @@ function validateTransaction(tx: Record<string, unknown>): string | null {
   if (!tx.description || typeof tx.description !== "string") return "description is required and must be a string";
   if (tx.amount === undefined || (typeof tx.amount !== "number" && typeof tx.amount !== "string")) return "amount is required and must be a number";
   if (isNaN(Number(tx.amount))) return "amount must be a valid number";
+  if (!tx.pageId || typeof tx.pageId !== "string") return "pageId is required and must be a string";
   if (tx.status && !(STATUSES as string[]).includes(tx.status as string)) return `status must be one of: ${STATUSES.join(", ")}`;
   return null;
 }
@@ -187,6 +198,7 @@ function validateTransaction(tx: Record<string, unknown>): string | null {
 function toInsertValues(tx: Record<string, unknown>, userId: string) {
   return {
     id: crypto.randomUUID(),
+    pageId: tx.pageId as string,
     date: tx.date as string,
     description: tx.description as string,
     category: (tx.category as string) ?? null,
@@ -207,30 +219,33 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
+  const isBulk = Array.isArray(body);
+  const items: Record<string, unknown>[] = isBulk ? body : [body];
 
-  // Bulk insert
-  if (Array.isArray(body)) {
-    for (let i = 0; i < body.length; i++) {
-      const err = validateTransaction(body[i]);
-      if (err) return Response.json({ error: `Row ${i}: ${err}` }, { status: 400 });
+  for (let i = 0; i < items.length; i++) {
+    const err = validateTransaction(items[i]);
+    if (err) {
+      const prefix = isBulk ? `Row ${i}: ` : "";
+      return Response.json({ error: `${prefix}${err}` }, { status: 400 });
     }
-    const rows = await db
-      .insert(transactions)
-      .values(body.map((tx: Record<string, unknown>) => toInsertValues(tx, session.user.id)))
-      .returning();
-    return Response.json(rows, { status: 201 });
   }
 
-  // Single insert
-  const err = validateTransaction(body);
-  if (err) return Response.json({ error: err }, { status: 400 });
+  // Verify every referenced page belongs to this user.
+  const pageIds = [...new Set(items.map((tx) => tx.pageId as string))];
+  const owned = await db
+    .select({ id: pages.id })
+    .from(pages)
+    .where(and(eq(pages.userId, session.user.id), inArray(pages.id, pageIds)));
+  if (owned.length !== pageIds.length) {
+    return Response.json({ error: "Invalid pageId" }, { status: 400 });
+  }
 
-  const [row] = await db
+  const rows = await db
     .insert(transactions)
-    .values(toInsertValues(body, session.user.id))
+    .values(items.map((tx) => toInsertValues(tx, session.user.id)))
     .returning();
 
-  return Response.json(row, { status: 201 });
+  return Response.json(isBulk ? rows : rows[0], { status: 201 });
 }
 
 export async function PUT(request: Request) {
