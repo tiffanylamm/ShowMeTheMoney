@@ -8,8 +8,15 @@ export type Category = string
 
 export type SortDirection = 'asc' | 'desc'
 
+export interface Page {
+    id: string
+    name: string
+    createdAt: number
+}
+
 export interface Transaction {
     id: string
+    pageId: string
     date: string //YYY-MM-DD
     description: string
     category: Category | null

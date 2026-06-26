@@ -90,6 +90,7 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   transactions: many(transactions),
+  pages: many(pages),
   driveTokens: many(driveTokens),
 }));
 
@@ -110,6 +111,26 @@ export const accountRelations = relations(account, ({ one }) => ({
 // ---------------------------------------------------------------------------
 // App tables
 // ---------------------------------------------------------------------------
+export const pages = pgTable(
+  "pages",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  },
+  (table) => [index("pages_userId_idx").on(table.userId)],
+);
+
+export const pageRelations = relations(pages, ({ one, many }) => ({
+  user: one(user, {
+    fields: [pages.userId],
+    references: [user.id],
+  }),
+  transactions: many(transactions),
+}));
 
 export const transactions = pgTable(
   "transactions",
@@ -118,6 +139,9 @@ export const transactions = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
     date: text("date").notNull(), // YYYY-MM-DD
     description: text("description").notNull(),
     category: text("category"),
@@ -126,35 +150,42 @@ export const transactions = pgTable(
     source: text("source"),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     isGroup: boolean("is_group").notNull().default(false),
-    parentId: text("parent_id").references(
-      (): AnyPgColumn => transactions.id,
-      { onDelete: "cascade" },
-    ),
+    parentId: text("parent_id").references((): AnyPgColumn => transactions.id, {
+      onDelete: "cascade",
+    }),
     driveFileId: text("drive_file_id"),
   },
   (table) => [
-    index("transactions_userId_parentId_createdAt_idx").on(
+    index("transactions_userId_pageId_parentId_createdAt_idx").on(
       table.userId,
+      table.pageId,
       table.parentId,
       table.createdAt,
     ),
   ],
 );
 
-export const transactionRelations = relations(transactions, ({ one, many }) => ({
-  user: one(user, {
-    fields: [transactions.userId],
-    references: [user.id],
+export const transactionRelations = relations(
+  transactions,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [transactions.userId],
+      references: [user.id],
+    }),
+    page: one(pages, {
+      fields: [transactions.pageId],
+      references: [pages.id],
+    }),
+    parent: one(transactions, {
+      fields: [transactions.parentId],
+      references: [transactions.id],
+      relationName: "parent_child",
+    }),
+    children: many(transactions, {
+      relationName: "parent_child",
+    }),
   }),
-  parent: one(transactions, {
-    fields: [transactions.parentId],
-    references: [transactions.id],
-    relationName: "parent_child",
-  }),
-  children: many(transactions, {
-    relationName: "parent_child",
-  }),
-}));
+);
 
 export const driveTokens = pgTable("drive_tokens", {
   id: text("id").primaryKey(),
@@ -179,5 +210,3 @@ export const driveTokenRelations = relations(driveTokens, ({ one }) => ({
     references: [user.id],
   }),
 }));
-
-
