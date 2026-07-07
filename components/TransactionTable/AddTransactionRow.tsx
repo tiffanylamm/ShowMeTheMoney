@@ -4,7 +4,9 @@ import { Check } from "lucide-react";
 
 interface AddTransactionRowProps {
   showAddRow: boolean;
-  onAdd: (transaction: Omit<Transaction, "id" | "createdAt">) => Promise<void>;
+  onAdd: (
+    transaction: Omit<Transaction, "id" | "createdAt" | "pageId">,
+  ) => Promise<void>;
   onCancelAdd: () => void;
 }
 

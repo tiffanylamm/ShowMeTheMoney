@@ -30,8 +30,12 @@ const EMPTY_TEXT_FILTERS: TextFilters = {
   amountMax: "",
 };
 
+type Page = { id: string; name: string; createdAt: number };
+
 //Hook
 export function useTransactions() {
+  const [pages, setPages] = useState<Page[]>([]);
+  const [pageId, setPageId] = useState<string | null>(null);
   const [pageRows, setPageRows] = useState<Transaction[]>([]);
   const [childRows, setChildRows] = useState<Record<string, Transaction[]>>({});
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,6 +74,7 @@ export function useTransactions() {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
   const prevUserIdRef = useRef<string | null>(null);
+  const prevPageIdRef = useRef<string | null>(null);
   const scrollToTopRef = useRef<(() => void) | null>(null);
 
   // Keep refs in sync so fetchPage always reads latest values without being recreated
@@ -86,6 +91,24 @@ export function useTransactions() {
     }
   }, [session, isPending, router]);
 
+  // Load the user's pages and select the first one. transactions.pageId is
+  // required by every transaction request, so nothing fetches until this lands.
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/pages");
+      if (!res.ok) return;
+      const data: Page[] = await res.json();
+      if (cancelled) return;
+      setPages(data);
+      setPageId((prev) => prev ?? data[0]?.id ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
   //fetch
 
   const fetchPage = useCallback(
@@ -95,10 +118,11 @@ export function useTransactions() {
       sortDir: string | null;
       sortAbs?: boolean;
     }) => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id || !pageId) return;
       setIsLoading(true);
 
       const params = new URLSearchParams();
+      params.set("pageId", pageId);
       params.set("page", String(opts.page));
       if (opts.sortBy && opts.sortDir) {
         params.set("sortBy", opts.sortBy);
@@ -131,18 +155,20 @@ export function useTransactions() {
         setIsLoading(false);
       }
     },
-    [session?.user?.id],
+    [session?.user?.id, pageId],
   );
 
   const fetchMetadata = useCallback(async () => {
-    if (!session?.user?.id) return;
-    const res = await fetch("/api/transactions?metadata=true");
+    if (!session?.user?.id || !pageId) return;
+    const res = await fetch(
+      `/api/transactions?metadata=true&pageId=${pageId}`,
+    );
     if (!res.ok) return;
     const data = await res.json();
     setAllGroups(data.groups);
     setAllCategories(data.categories);
     setAllSources(data.sources);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, pageId]);
 
   // Shorthand to re-run fetchPage with current sort/abs state
   const refetchCurrentPage = useCallback(
@@ -169,9 +195,13 @@ export function useTransactions() {
 
   // Main fetch trigger
   useEffect(() => {
-    if (!session?.user?.id) return;
-    if (prevUserIdRef.current !== session.user.id) {
+    if (!session?.user?.id || !pageId) return;
+    if (
+      prevUserIdRef.current !== session.user.id ||
+      prevPageIdRef.current !== pageId
+    ) {
       prevUserIdRef.current = session.user.id;
+      prevPageIdRef.current = pageId;
       fetchMetadata();
     }
     fetchPage({
@@ -183,6 +213,7 @@ export function useTransactions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     session?.user?.id,
+    pageId,
     currentPage,
     debouncedTextFilters,
     sortConfig,
@@ -283,12 +314,12 @@ export function useTransactions() {
   // Crud Handlers -------------------
 
   const handleAddTransaction = async (
-    newTransaction: Omit<Transaction, "id" | "createdAt">,
+    newTransaction: Omit<Transaction, "id" | "createdAt" | "pageId">,
   ): Promise<void> => {
     const res = await fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newTransaction }),
+      body: JSON.stringify({ ...newTransaction, pageId }),
     });
     const created: Transaction = await res.json();
     addMetadata(newTransaction);
@@ -479,7 +510,9 @@ export function useTransactions() {
     });
 
     if (!childRows[id]) {
-      const res = await fetch(`/api/transactions?parentId=${id}`);
+      const res = await fetch(
+        `/api/transactions?parentId=${id}&pageId=${pageId}`,
+      );
       const data: Transaction[] = await res.json();
       setChildRows((prev) => ({ ...prev, [id]: data }));
     }
@@ -499,6 +532,7 @@ export function useTransactions() {
       ...groupInfo,
       isGroup: true,
       parentId: sharedParentId,
+      pageId,
     };
 
     // POST first — children's parentId FK requires the group row to exist
@@ -527,7 +561,9 @@ export function useTransactions() {
     if (sharedParentId) {
       // Sub-group: re-fetch the parent's children (now includes the new sub-group,
       // without the items that moved into it) and cascade the parent's summary up
-      const res = await fetch(`/api/transactions?parentId=${sharedParentId}`);
+      const res = await fetch(
+        `/api/transactions?parentId=${sharedParentId}&pageId=${pageId}`,
+      );
       const newChildren: Transaction[] = await res.json();
       setChildRows((prev) => ({ ...prev, [sharedParentId]: newChildren }));
       await handleUpdateTransaction(
@@ -565,7 +601,9 @@ export function useTransactions() {
         if (existing) {
           return [id, existing.filter((tx) => !childIds.includes(tx.id))] as const;
         }
-        const res = await fetch(`/api/transactions?parentId=${id}`);
+        const res = await fetch(
+          `/api/transactions?parentId=${id}&pageId=${pageId}`,
+        );
         const fetched: Transaction[] = await res.json();
         return [id, fetched.filter((tx) => !childIds.includes(tx.id))] as const;
       }),
@@ -674,7 +712,9 @@ export function useTransactions() {
     }
 
     // Recompute new group summary — always fetch fresh children so collapsed groups update correctly
-    const newChildrenRes = await fetch(`/api/transactions?parentId=${groupId}`);
+    const newChildrenRes = await fetch(
+      `/api/transactions?parentId=${groupId}&pageId=${pageId}`,
+    );
     const newChildren: Transaction[] = await newChildrenRes.json();
     const groupUpdates = computeGroupFields(newChildren);
     const targetParentId = parentMap.get(groupId) ?? null;
@@ -784,7 +824,9 @@ export function useTransactions() {
 
     if (grandparentId) {
       // Re-fetch grandparent's children — now includes the re-parented child
-      const res = await fetch(`/api/transactions?parentId=${grandparentId}`);
+      const res = await fetch(
+        `/api/transactions?parentId=${grandparentId}&pageId=${pageId}`,
+      );
       const newGrandparentChildren: Transaction[] = await res.json();
       setChildRows((prev) => ({
         ...prev,
@@ -939,7 +981,7 @@ export function useTransactions() {
   };
 
   const handleImportTransactions = async (
-    newTransactions: Omit<Transaction, "id" | "createdAt">[],
+    newTransactions: Omit<Transaction, "id" | "createdAt" | "pageId">[],
   ) => {
     const now = Date.now();
     const sorted = [...newTransactions].sort((a, b) =>
@@ -948,6 +990,7 @@ export function useTransactions() {
     const withTimestamps = sorted.map((tx, i) => ({
       ...tx,
       createdAt: now - i,
+      pageId,
     }));
 
     const res = await fetch("/api/transactions", {
@@ -971,6 +1014,11 @@ export function useTransactions() {
     // Auth
     session,
     isPending,
+
+    // Pages
+    pages,
+    pageId,
+    setPageId,
 
     // Data
     displayRows,

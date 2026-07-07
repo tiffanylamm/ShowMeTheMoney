@@ -21,7 +21,9 @@ interface TransactionTableProps {
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Transaction>) => void;
   showAddRow: boolean;
-  onAdd: (transaction: Omit<Transaction, "id" | "createdAt">) => Promise<void>;
+  onAdd: (
+    transaction: Omit<Transaction, "id" | "createdAt" | "pageId">,
+  ) => Promise<void>;
   onCancelAdd: () => void;
   expandedIds: Set<string>;
   onToggleExpand: (id: string) => void;

@@ -6,7 +6,9 @@ import { CSV_PRESETS, CSVPreset } from "@/lib/csvPresets";
 interface CSVImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (transactions: Omit<Transaction, "id" | "createdAt">[]) => void;
+  onImport: (
+    transactions: Omit<Transaction, "id" | "createdAt" | "pageId">[],
+  ) => void;
 }
 
 interface CSVData {
