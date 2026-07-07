@@ -6,6 +6,7 @@ import CSVImportModal from "@/components/CSVImportModal";
 import Pagination from "@/components/Pagination";
 import { Plus, Upload, X } from "lucide-react";
 import SettingsDrawer from "@/components/SettingsDrawer";
+import PagesSidebar from "@/components/PagesSidebar";
 import { useTransactions } from "@/hooks/useTransactions";
 
 const Home = () => {
@@ -25,6 +26,14 @@ const Home = () => {
   const {
     session,
     isPending,
+
+    // Pages
+    pages,
+    pageId,
+    handleSelectPage,
+    handleCreatePage,
+    handleRenamePage,
+    handleDeletePage,
 
     // Data
     displayRows,
@@ -94,6 +103,14 @@ const Home = () => {
         <header className="flex justify-between items-center gap-4 mb-8 shrink-0">
           {/* Main Logo */}
           <div className="flex items-center gap-2">
+            <PagesSidebar
+              pages={pages}
+              pageId={pageId}
+              onSelectPage={handleSelectPage}
+              onCreatePage={handleCreatePage}
+              onRenamePage={handleRenamePage}
+              onDeletePage={handleDeletePage}
+            />
             <img
               src="/logo-dark.png"
               alt="Logo"

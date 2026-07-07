@@ -109,6 +109,65 @@ export function useTransactions() {
     };
   }, [session?.user?.id]);
 
+  // Switch the active page, clearing transient per-page state so nothing from
+  // the previous page leaks in before the new page's rows/metadata load.
+  const handleSelectPage = useCallback(
+    (id: string) => {
+      setPageId((prev) => {
+        if (prev === id) return prev;
+        setCurrentPage(1);
+        setChildRows({});
+        setExpandedIds(new Set());
+        setSelectedMap(new Map());
+        setPinnedRow(null);
+        return id;
+      });
+    },
+    [],
+  );
+
+  const handleCreatePage = useCallback(
+    async (name: string) => {
+      const res = await fetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) return;
+      const created: Page = await res.json();
+      setPages((prev) => [...prev, created]);
+      handleSelectPage(created.id);
+    },
+    [handleSelectPage],
+  );
+
+  const handleRenamePage = useCallback(async (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setPages((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, name: trimmed } : p)),
+    );
+    await fetch(`/api/pages/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+  }, []);
+
+  const handleDeletePage = useCallback(
+    async (id: string) => {
+      const res = await fetch(`/api/pages/${id}`, { method: "DELETE" });
+      if (!res.ok) return; // e.g. 409 when it's the user's last page
+      setPages((prev) => prev.filter((p) => p.id !== id));
+      // If the active page was deleted, fall back to another page.
+      if (pageId === id) {
+        const fallback = pages.find((p) => p.id !== id);
+        if (fallback) handleSelectPage(fallback.id);
+      }
+    },
+    [pageId, pages, handleSelectPage],
+  );
+
   //fetch
 
   const fetchPage = useCallback(
@@ -1018,7 +1077,10 @@ export function useTransactions() {
     // Pages
     pages,
     pageId,
-    setPageId,
+    handleSelectPage,
+    handleCreatePage,
+    handleRenamePage,
+    handleDeletePage,
 
     // Data
     displayRows,
